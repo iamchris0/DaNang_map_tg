@@ -9,6 +9,11 @@ import { Spinner } from '@/components/ui/Spinner';
 import { DevLogin } from '@/features/admin/DevLogin';
 import { bindBackButton, isInTelegram } from '@/telegram/webapp';
 
+// The backend refuses dev sign-in through proxies and tunnels; don't offer it there either.
+function isLocalHost(): boolean {
+  return ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+}
+
 /**
  * Admin shell. Visibility here is only a convenience: every admin API call is authorised
  * by the backend.
@@ -47,7 +52,7 @@ export function AdminLayout() {
         {!user && !isInTelegram() && (
           <p className="text-hint mt-2 text-sm">{t('admin.openInTelegram')}</p>
         )}
-        {import.meta.env.DEV && !isInTelegram() && <DevLogin />}
+        {import.meta.env.DEV && !isInTelegram() && isLocalHost() && <DevLogin />}
       </div>
     );
   }

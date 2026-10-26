@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
+    if settings.telegram_bot_username and not settings.telegram_mini_app_short_name:
+        logger.warning(
+            "TELEGRAM_MINI_APP_SHORT_NAME is empty: listing links in channel posts open the "
+            "website instead of the Mini App (create one with /newapp in @BotFather)"
+        )
     if settings.s3_auto_create_bucket:
         await _ensure_bucket_with_retry()
     yield
