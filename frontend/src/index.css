@@ -5,13 +5,23 @@
  * falling back to our own light/dark palette in a regular browser.
  */
 :root {
+  /*
+   * Surfaces and text follow Telegram's theme (light/dark) when running inside Telegram;
+   * the brand colour stays constant so the catalog looks the same everywhere.
+   */
   --app-bg: var(--tg-theme-bg-color, #ffffff);
-  --app-surface: var(--tg-theme-secondary-bg-color, #f2f3f5);
-  --app-text: var(--tg-theme-text-color, #111418);
-  --app-hint: var(--tg-theme-hint-color, #6b7280);
-  --app-accent: var(--tg-theme-button-color, #2481cc);
-  --app-accent-text: var(--tg-theme-button-text-color, #ffffff);
-  --app-danger: var(--tg-theme-destructive-text-color, #d93025);
+  --app-surface: var(--tg-theme-secondary-bg-color, #f7f7f7);
+  --app-text: var(--tg-theme-text-color, #222222);
+  --app-hint: var(--tg-theme-hint-color, #6a6a6a);
+  --app-line: color-mix(in srgb, var(--app-text) 14%, transparent);
+  --app-accent: #ff385c;
+  --app-accent-text: #ffffff;
+  /* High-contrast dark buttons/pills (selected marker, map/list switch). */
+  --app-ink: var(--app-text);
+  --app-ink-text: var(--app-bg);
+  --app-danger: var(--tg-theme-destructive-text-color, #c13515);
+  --app-success: #008a05;
+  --app-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 
   /* Device safe areas plus Telegram's own (fullscreen mode) insets. */
   --safe-top: max(
@@ -23,12 +33,13 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --app-bg: var(--tg-theme-bg-color, #17212b);
-    --app-surface: var(--tg-theme-secondary-bg-color, #232e3c);
+    --app-bg: var(--tg-theme-bg-color, #121212);
+    --app-surface: var(--tg-theme-secondary-bg-color, #1f1f1f);
     --app-text: var(--tg-theme-text-color, #f5f5f5);
-    --app-hint: var(--tg-theme-hint-color, #8b9bab);
-    --app-accent: var(--tg-theme-button-color, #5288c1);
-    --app-danger: var(--tg-theme-destructive-text-color, #ec3942);
+    --app-hint: var(--tg-theme-hint-color, #a3a3a3);
+    --app-danger: var(--tg-theme-destructive-text-color, #ff6b5b);
+    --app-success: #4cc95a;
+    --app-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -37,9 +48,14 @@
   --color-surface: var(--app-surface);
   --color-fg: var(--app-text);
   --color-hint: var(--app-hint);
+  --color-line: var(--app-line);
   --color-accent: var(--app-accent);
   --color-accent-fg: var(--app-accent-text);
+  --color-ink: var(--app-ink);
+  --color-ink-fg: var(--app-ink-text);
   --color-danger: var(--app-danger);
+  --color-success: var(--app-success);
+  --shadow-card: var(--app-shadow);
 }
 
 html,
@@ -65,4 +81,26 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* MapLibre controls in the app's style: round white buttons with a soft shadow. */
+.maplibregl-ctrl-group:not(:empty) {
+  overflow: hidden;
+  border-radius: 9999px;
+  box-shadow: var(--app-shadow);
+}
+.maplibregl-ctrl-group button {
+  width: 40px;
+  height: 40px;
+}
+.maplibregl-ctrl-attrib {
+  border-radius: 9999px;
+}
+
+/* Horizontal scrollers (filter chips) without visible scrollbars. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

@@ -11,15 +11,13 @@ export function Gallery({ images, title }: { images: Image[]; title: string }) {
   const [index, setIndex] = useState(0);
 
   if (images.length === 0) {
-    return (
-      <ApartmentPhoto image={null} alt={title} className="aspect-[4/3] w-full md:rounded-2xl" />
-    );
+    return <ApartmentPhoto image={null} alt={title} className="aspect-[4/3] w-full" />;
   }
 
   return (
     <div className="relative">
       <ul
-        className="flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto md:rounded-2xl [&::-webkit-scrollbar]:hidden"
+        className="flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto [&::-webkit-scrollbar]:hidden"
         style={{ scrollbarWidth: 'none' }}
         onScroll={(event) => {
           const { scrollLeft, clientWidth } = event.currentTarget;
@@ -40,7 +38,7 @@ export function Gallery({ images, title }: { images: Image[]; title: string }) {
       {images.length > 1 && (
         <span
           aria-hidden="true"
-          className="absolute right-3 bottom-3 rounded-full bg-black/60 px-2 py-0.5 text-xs font-medium text-white"
+          className="absolute right-4 bottom-4 rounded-md bg-black/70 px-2.5 py-1 text-xs font-semibold text-white"
         >
           {index + 1} / {images.length}
         </span>

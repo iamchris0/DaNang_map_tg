@@ -5,9 +5,12 @@ import { type CatalogSort, useApartmentList } from '@/api/catalog';
 import { Spinner } from '@/components/ui/Spinner';
 import { ApartmentCard } from '@/features/apartment/ApartmentCard';
 import type { CatalogFilters } from '@/features/filters/filters';
+import type { BBox } from '@/lib/geo';
 
 interface Props {
   filters: CatalogFilters;
+  /** Limit to the visible map area (desktop split view). */
+  bbox?: BBox | null;
   sort: CatalogSort;
   onSortChange: (sort: CatalogSort) => void;
   onReset: () => void;
@@ -15,9 +18,9 @@ interface Props {
 
 const SORTS: CatalogSort[] = ['newest', 'price_asc', 'price_desc'];
 
-export function ListPanel({ filters, sort, onSortChange, onReset }: Props) {
+export function ListPanel({ filters, bbox = null, sort, onSortChange, onReset }: Props) {
   const { t } = useTranslation();
-  const query = useApartmentList(filters, sort);
+  const query = useApartmentList(filters, sort, bbox);
   const sentinel = useRef<HTMLDivElement>(null);
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
 
@@ -44,11 +47,17 @@ export function ListPanel({ filters, sort, onSortChange, onReset }: Props) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto max-w-5xl px-3 pt-3 pb-[calc(1rem+var(--safe-bottom))]">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p role="status" className="text-hint text-sm">
-            {total !== undefined && t('catalog.count', { count: total })}
-          </p>
+      <div className="mx-auto max-w-6xl px-4 pt-5 pb-[calc(6rem+var(--safe-bottom))] lg:px-10 lg:pb-10">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p role="status" className="text-lg font-semibold lg:text-xl">
+              {total !== undefined &&
+                (bbox
+                  ? t('catalog.inMapArea', { count: total })
+                  : t('catalog.count', { count: total }))}
+            </p>
+            <p className="text-hint text-sm">{t('catalog.pricesNote')}</p>
+          </div>
           <label className="flex items-center gap-2 text-sm">
             <span className="sr-only">{t('catalog.sort.label')}</span>
             <select
@@ -56,7 +65,7 @@ export function ListPanel({ filters, sort, onSortChange, onReset }: Props) {
               onChange={(event) => {
                 onSortChange(event.target.value as CatalogSort);
               }}
-              className="border-hint/30 bg-bg min-h-9 rounded-lg border px-2"
+              className="border-line bg-bg min-h-10 rounded-full border px-4 font-semibold"
             >
               {SORTS.map((option) => (
                 <option key={option} value={option}>
@@ -91,7 +100,7 @@ export function ListPanel({ filters, sort, onSortChange, onReset }: Props) {
           </div>
         ) : (
           <>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 2xl:grid-cols-3">
               {items.map((apartment) => (
                 <li key={apartment.id}>
                   <ApartmentCard apartment={apartment} />

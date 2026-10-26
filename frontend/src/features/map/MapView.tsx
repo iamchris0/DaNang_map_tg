@@ -165,7 +165,7 @@ export default function MapView({ markers, selectedId, onSelect, onViewportChang
                       zoom: Math.min(index.getClusterExpansionZoom(clusterId), 17),
                     });
                   }}
-                  className="bg-accent text-accent-fg flex size-11 items-center justify-center rounded-full border-[3px] border-white text-sm font-bold shadow-md"
+                  className="border-bg bg-ink text-ink-fg shadow-card flex size-11 items-center justify-center rounded-full border-2 text-sm font-bold transition-transform hover:scale-105"
                 >
                   {count}
                 </button>

@@ -143,3 +143,31 @@ async def test_auth_rate_limited(api: AsyncClient, settings: Settings) -> None:
         for _ in range(4)
     ]
     assert codes == [200, 200, 200, 429]
+
+
+@pytest.mark.parametrize(
+    "header", ["cf-connecting-ip", "x-forwarded-for", "forwarded", "x-real-ip"]
+)
+async def test_dev_login_refused_through_proxy_or_tunnel(
+    api: AsyncClient, settings: Settings, header: str
+) -> None:
+    settings.dev_auth_enabled = True
+    response = await api.post(
+        "/api/auth/dev", json={"telegram_user_id": ADMIN_TG_ID}, headers={header: "203.0.113.7"}
+    )
+    assert response.status_code == 404
+
+
+async def test_client_error_reports_are_logged(
+    api: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.api.routes import client_log
+
+    logged: list[tuple[object, ...]] = []
+    monkeypatch.setattr(client_log.logger, "warning", lambda *args: logged.append(args))
+    payload = {"message": "TypeError: x is undefined", "source": "main.js:1", "platform": "ios"}
+    response = await api.post("/api/client-errors", json=payload)
+    assert response.status_code == 204
+    assert logged and "TypeError: x is undefined" in logged[0]
+    too_long = await api.post("/api/client-errors", json={"message": "x" * 5000})
+    assert too_long.status_code == 422

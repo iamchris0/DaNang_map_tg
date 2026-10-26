@@ -1,81 +1,94 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
+import { useDistricts } from '@/api/catalog';
 import { useAuth } from '@/auth/useAuth';
-
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { FilterIcon, ListIcon, MapIcon, SettingsIcon } from '@/components/ui/icons';
-import type { CatalogView } from '@/features/filters/useCatalogState';
+import { SearchIcon, SettingsIcon } from '@/components/ui/icons';
+import { Logo } from '@/components/ui/Logo';
+import type { CatalogFilters } from '@/features/filters/filters';
+
+import { summarize } from './filterSummary';
 
 interface Props {
-  view: CatalogView;
-  onViewChange: (view: CatalogView) => void;
-  activeFilters: number;
+  filters: CatalogFilters;
   onOpenFilters: () => void;
 }
 
-export function CatalogHeader({ view, onViewChange, activeFilters, onOpenFilters }: Props) {
-  const { t } = useTranslation();
+export function CatalogHeader({ filters, onOpenFilters }: Props) {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
-  const views: { id: CatalogView; label: string; Icon: typeof MapIcon }[] = [
-    { id: 'map', label: t('catalog.map'), Icon: MapIcon },
-    { id: 'list', label: t('catalog.list'), Icon: ListIcon },
-  ];
+  const districts = useDistricts();
+  const summary = summarize(t, filters, districts.data, i18n.resolvedLanguage ?? 'en');
 
   return (
-    <header className="bg-bg z-10 flex items-center gap-2 px-3 pt-[calc(0.5rem+var(--safe-top))] pb-2 shadow-sm">
-      <h1 className="sr-only md:not-sr-only md:mr-2 md:text-lg md:font-bold">{t('app.name')}</h1>
-      <div
-        role="tablist"
-        aria-label={t('catalog.views')}
-        className="bg-surface flex rounded-full p-0.5"
-      >
-        {views.map(({ id, label, Icon }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={view === id}
-            onClick={() => {
-              onViewChange(id);
-            }}
-            className={`flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium ${
-              view === id ? 'bg-bg text-fg shadow-sm' : 'text-hint'
-            }`}
-          >
-            <Icon width={16} height={16} />
-            {label}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={onOpenFilters}
-        aria-label={
-          activeFilters
-            ? t('catalog.filtersActive', { count: activeFilters })
-            : t('catalog.filters')
-        }
-        className="bg-surface ml-auto flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium"
-      >
-        <FilterIcon width={16} height={16} />
-        <span className="hidden sm:inline">{t('catalog.filters')}</span>
-        {activeFilters > 0 && (
-          <span className="bg-accent text-accent-fg flex size-5 items-center justify-center rounded-full text-xs">
-            {activeFilters}
-          </span>
-        )}
-      </button>
-      {user?.is_admin && (
-        <Link
-          to="/admin"
-          aria-label={t('admin.open')}
-          className="bg-surface flex size-9 shrink-0 items-center justify-center rounded-full"
-        >
-          <SettingsIcon width={18} height={18} />
+    <header className="border-line bg-bg z-10 border-b px-4 pt-[calc(0.75rem+var(--safe-top))] pb-3 lg:px-10">
+      <div className="flex items-center gap-3">
+        <Link to="/" className="hidden shrink-0 lg:block" aria-label={t('app.name')}>
+          <Logo label={t('app.name')} />
         </Link>
-      )}
-      <LanguageSwitcher />
+        <h1 className="sr-only">{t('app.name')}</h1>
+
+        {/* Phone: one pill with a two-line summary. */}
+        <button
+          type="button"
+          onClick={onOpenFilters}
+          aria-label={t('catalog.search')}
+          className="border-line bg-bg shadow-card flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-full border px-4 text-left lg:hidden"
+        >
+          <SearchIcon className="shrink-0" />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-semibold">{summary.where}</span>
+            <span className="text-hint block truncate text-xs">
+              {summary.rent} · {summary.size}
+            </span>
+          </span>
+        </button>
+
+        {/* Desktop: segmented search pill. */}
+        <div className="border-line bg-bg shadow-card mx-auto hidden items-center rounded-full border py-1.5 pr-1.5 pl-2 lg:flex">
+          {(
+            [
+              ['where', summary.where],
+              ['rent', summary.rent],
+              ['size', summary.size],
+            ] as const
+          ).map(([key, value], index) => (
+            <button
+              key={key}
+              type="button"
+              onClick={onOpenFilters}
+              className={`hover:bg-surface max-w-56 rounded-full px-5 py-1.5 text-left ${
+                index > 0 ? 'border-line border-l' : ''
+              }`}
+            >
+              <span className="block text-xs font-semibold">{t(`catalog.${key}`)}</span>
+              <span className="text-hint block truncate text-sm">{value}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={onOpenFilters}
+            aria-label={t('catalog.search')}
+            className="bg-accent text-accent-fg ml-2 flex size-12 items-center justify-center rounded-full"
+          >
+            <SearchIcon />
+          </button>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 lg:ml-0">
+          <LanguageSwitcher />
+          {user?.is_admin && (
+            <Link
+              to="/admin"
+              aria-label={t('admin.open')}
+              className="border-line bg-bg hover:shadow-card flex size-10 items-center justify-center rounded-full border"
+            >
+              <SettingsIcon width={18} height={18} />
+            </Link>
+          )}
+        </div>
+      </div>
     </header>
   );
 }

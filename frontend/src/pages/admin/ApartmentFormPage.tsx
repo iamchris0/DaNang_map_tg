@@ -4,7 +4,7 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useBlocker, useNavigate, useParams } from 'react-router';
 
-import { useAdminApartment, useDeleteApartment, useSaveApartment } from '@/api/admin';
+import { uploadImage, useAdminApartment, useDeleteApartment, useSaveApartment } from '@/api/admin';
 import { useDistricts } from '@/api/catalog';
 import { ApiError } from '@/api/client';
 import type { AdminApartment } from '@/api/types';
@@ -15,7 +15,11 @@ import { useToast } from '@/components/ui/toastContext';
 import { adminErrorMessage, missingFieldsLabel } from '@/features/admin/errors';
 import { FormSection, SelectField, TextAreaField, TextField } from '@/features/admin/form/fields';
 import { LocationSection } from '@/features/admin/form/LocationSection';
-import { PhotoManager } from '@/features/admin/form/PhotoManager';
+import {
+  PhotoManager,
+  type StagedPhoto,
+  StagedPhotoManager,
+} from '@/features/admin/form/PhotoManager';
 import {
   apartmentSchema,
   type ApartmentFormValues,
@@ -79,7 +83,14 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
     defaultValues: EMPTY_VALUES,
   });
   const { register, handleSubmit, control, reset, setError, setValue, formState } = form;
-  const { errors, isDirty, isSubmitting } = formState;
+  const { errors, isDirty: fieldsDirty, isSubmitting } = formState;
+
+  // New listings: photos are picked before the listing exists and uploaded right after
+  // "Save draft" creates it.
+  const [staged, setStaged] = useState<StagedPhoto[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const isDirty = fieldsDirty || staged.length > 0;
 
   // Load the listing into the form once (later refetches must not overwrite edits).
   const loadedId = useRef<string | null>(null);
@@ -114,14 +125,44 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
 
   const leaveTo = (path: string) => {
     reset(undefined, { keepValues: true });
+    setStaged([]);
     setRedirectTo(path);
+  };
+
+  const uploadStaged = async (apartmentId: string) => {
+    let failed = 0;
+    for (const [index, photo] of staged.entries()) {
+      setUploadingIndex(index);
+      try {
+        await uploadImage(apartmentId, photo.file, (fraction) => {
+          setUploadProgress((current) => ({ ...current, [photo.key]: fraction }));
+        });
+      } catch (error) {
+        failed += 1;
+        toast(
+          t('admin.photos.rejected', {
+            name: photo.file.name,
+            reason: adminErrorMessage(t, error),
+          }),
+          'error',
+        );
+      }
+    }
+    staged.forEach((photo) => {
+      URL.revokeObjectURL(photo.src);
+    });
+    setUploadingIndex(null);
+    setUploadProgress({});
+    return staged.length - failed;
   };
 
   const onSubmit = handleSubmit(async (values) => {
     try {
       const saved = await save.mutateAsync(toInput(values));
+      const uploaded = isNew && staged.length ? await uploadStaged(saved.id) : 0;
       reset(fromApartment(saved));
       toast(isNew ? t('admin.form.created') : t('admin.form.saved'));
+      if (uploaded > 0) toast(t('admin.photos.uploaded', { count: uploaded }));
       if (isNew) leaveTo(`/admin/apartments/${saved.id}`);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'validation_error') {
@@ -167,9 +208,9 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
     <form
       noValidate
       onSubmit={(event) => void onSubmit(event)}
-      className="mx-auto max-w-3xl space-y-4 px-3 pt-3 pb-[calc(6rem+var(--safe-bottom))]"
+      className="mx-auto max-w-3xl space-y-4 px-4 pt-5 pb-[calc(6rem+var(--safe-bottom))] lg:px-6"
     >
-      <h2 className="text-xl font-bold">
+      <h2 className="text-2xl font-semibold">
         {isNew ? t('admin.form.newTitle') : t('admin.form.editTitle')}
       </h2>
 
@@ -207,7 +248,7 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
           ]}
           {...register('district_id')}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 items-end gap-3">
           <SelectField
             label={t('admin.form.bedrooms')}
             error={errors.bedrooms}
@@ -250,12 +291,12 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
         {apartment.data ? (
           <PhotoManager apartmentId={apartment.data.id} images={apartment.data.images} />
         ) : (
-          <p className="text-hint text-sm">{t('admin.photos.saveFirst')}</p>
+          <StagedPhotoManager photos={staged} onChange={setStaged} progress={uploadProgress} />
         )}
       </FormSection>
 
       <FormSection title={t('admin.form.sections.terms')}>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 items-end gap-3">
           <TextField
             label={t('admin.form.deposit')}
             inputMode="numeric"
@@ -324,18 +365,23 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
         </button>
       )}
 
-      <div className="border-hint/15 bg-bg fixed inset-x-0 bottom-0 z-10 border-t px-3 pt-3 pb-[calc(0.75rem+var(--safe-bottom))]">
+      <div className="border-line bg-bg fixed inset-x-0 bottom-0 z-10 border-t px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))]">
         <div className="mx-auto max-w-3xl">
           <button
             type="submit"
             disabled={isSubmitting || (!isNew && !isDirty)}
             className="bg-accent text-accent-fg min-h-12 w-full rounded-xl font-semibold disabled:opacity-50"
           >
-            {isSubmitting
-              ? t('admin.form.saving')
-              : isNew
-                ? t('admin.form.create')
-                : t('admin.form.save')}
+            {uploadingIndex !== null
+              ? t('admin.photos.uploadingProgress', {
+                  current: uploadingIndex + 1,
+                  total: staged.length,
+                })
+              : isSubmitting
+                ? t('admin.form.saving')
+                : isNew
+                  ? t('admin.form.create')
+                  : t('admin.form.save')}
           </button>
         </div>
       </div>

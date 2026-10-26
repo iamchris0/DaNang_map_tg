@@ -37,7 +37,24 @@
       "newest": "Newest first",
       "price_asc": "Price: low to high",
       "price_desc": "Price: high to low"
-    }
+    },
+    "search": "Search apartments",
+    "anywhere": "Anywhere in Da Nang",
+    "anyRent": "Any rent",
+    "anySize": "Any size",
+    "where": "Where",
+    "rent": "Rent",
+    "size": "Rooms",
+    "showMap": "Map",
+    "showList": "List",
+    "inMapArea_one": "{{count}} apartment in this map area",
+    "inMapArea_other": "{{count}} apartments in this map area",
+    "pricesNote": "Prices are per month",
+    "districtsMore_one": "{{first}} +{{count}}",
+    "districtsMore_other": "{{first}} +{{count}}",
+    "rentFrom": "from {{min}}",
+    "rentUpTo": "up to {{max}}",
+    "quickFilters": "Quick filters"
   },
   "map": {
     "label": "Map of apartments in Da Nang",
@@ -81,7 +98,14 @@
     "notFound": "This listing does not exist.",
     "unavailable": "This apartment is no longer available.",
     "loadError": "Could not load this apartment.",
-    "browse": "Browse apartments"
+    "browse": "Browse apartments",
+    "bathroomsShort_one": "{{count}} bath",
+    "bathroomsShort_other": "{{count}} baths",
+    "contact": "Contact",
+    "monthShort": "month",
+    "about": "About this place",
+    "whereYoullLive": "Where you'll be",
+    "terms": "Rental terms"
   },
   "filters": {
     "title": "Filters",
@@ -184,7 +208,7 @@
       "description": "Description",
       "conditions": "Rental conditions",
       "deposit": "Deposit, ₫",
-      "minMonths": "Minimum rental, months",
+      "minMonths": "Min. rental, months",
       "contactType": "Contact type",
       "contactNone": "No agent contact",
       "contactTypes": {
@@ -242,7 +266,6 @@
     "photos": {
       "add": "Add photos",
       "hint": "JPEG, PNG or WebP · up to {{size}} MB each · max {{max}} photos",
-      "saveFirst": "Save the draft first, then add photos.",
       "cover": "Cover",
       "makeCover": "Make cover",
       "moveEarlier": "Move earlier",
@@ -257,7 +280,8 @@
       "rejected": "{{name}}: {{reason}}",
       "tooLarge": "larger than {{size}} MB",
       "wrongType": "not a JPEG, PNG or WebP image",
-      "tooMany": "photo limit reached"
+      "tooMany": "photo limit reached",
+      "uploadingProgress": "Uploading photos {{current}}/{{total}}…"
     },
     "errors": {
       "listing_incomplete": "Missing required fields: {{fields}}",

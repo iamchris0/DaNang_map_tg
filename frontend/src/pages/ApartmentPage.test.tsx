@@ -14,7 +14,8 @@ describe('apartment details', () => {
     renderApp(`/apartments/${SEA_VIEW.id}`);
 
     expect(await screen.findByRole('heading', { level: 1, name: SEA_VIEW.title })).toBeVisible();
-    expect(screen.getByText('12,000,000 ₫', { selector: 'p' })).toBeInTheDocument();
+    // Rent and deposit are both 12,000,000 ₫ in the fixture.
+    expect(screen.getAllByText('12,000,000 ₫')).toHaveLength(2);
     expect(screen.getByText(/An Thuong 2/)).toBeInTheDocument();
     const facts = screen.getByRole('heading', { name: 'Key facts' }).parentElement!;
     for (const text of ['45 m²', '1 bedroom', '6 months']) {
@@ -76,7 +77,8 @@ describe('apartment details', () => {
     installFakeApi();
     const user = userEvent.setup();
     const { router } = renderApp(`/apartments/${SEA_VIEW.id}`);
-    await user.click(await screen.findByRole('button', { name: 'Back' }));
+    await screen.findByRole('heading', { level: 1, name: SEA_VIEW.title });
+    await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(router.state.location.pathname).toBe('/');
   });
 });

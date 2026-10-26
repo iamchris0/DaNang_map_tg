@@ -9,6 +9,62 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Da Nang Apartments</title>
+    <!--
+      Minimal error reporter (inline, runs before the app): Telegram's webview has no visible
+      console, so errors, failed script loads and "app did not start" go to the server log.
+    -->
+    <script>
+      (function () {
+        var sent = 0;
+        function report(message, extra) {
+          if (sent++ >= 10) return;
+          var webApp = window.Telegram && window.Telegram.WebApp;
+          var body = JSON.stringify(
+            Object.assign(
+              { message: String(message).slice(0, 1000), url: location.pathname },
+              { platform: webApp ? webApp.platform + ' ' + webApp.version : 'browser' },
+              extra || {},
+            ),
+          );
+          try {
+            fetch('/api/client-errors', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: body,
+              keepalive: true,
+            });
+          } catch (e) {}
+        }
+        window.__reportClientError = report;
+        window.addEventListener(
+          'error',
+          function (event) {
+            var target = event.target;
+            if (target && target !== window && (target.src || target.href)) {
+              report('Failed to load resource', { source: String(target.src || target.href) });
+            } else {
+              report(event.message, {
+                source: event.filename + ':' + event.lineno,
+                stack:
+                  event.error && event.error.stack
+                    ? String(event.error.stack).slice(0, 4000)
+                    : null,
+              });
+            }
+          },
+          true,
+        );
+        window.addEventListener('unhandledrejection', function (event) {
+          var reason = event.reason || {};
+          report('Unhandled rejection: ' + (reason.message || reason), {
+            stack: reason.stack ? String(reason.stack).slice(0, 4000) : null,
+          });
+        });
+        setTimeout(function () {
+          if (!window.__appStarted) report('App did not start within 15 s');
+        }, 15000);
+      })();
+    </script>
     <!-- Official Telegram Mini Apps script; must load before the app. No-op in a browser. -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>

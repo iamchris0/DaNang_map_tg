@@ -33,9 +33,8 @@ describe('map view', () => {
 
     const sheet = await screen.findByRole('dialog', { name: SEA_VIEW.title });
     expect(within(sheet).getByText('12,000,000 ₫')).toBeInTheDocument();
-    expect(within(sheet).getByText('Sơn Trà')).toBeInTheDocument();
-    expect(within(sheet).getByText('1 bedroom')).toBeInTheDocument();
-    expect(within(sheet).getByText('45 m²')).toBeInTheDocument();
+    expect(within(sheet).getByText('1 bedroom · Sơn Trà')).toBeInTheDocument();
+    expect(within(sheet).getByText('45 m² · 1 bath')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^12M ₫/ })).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(within(sheet).getByRole('link', { name: 'View details' }));
@@ -86,7 +85,7 @@ describe('filters', () => {
     expect(screen.getByRole('button', { name: 'Filters, 2 active' })).toBeInTheDocument();
 
     // The list view shares the same filters.
-    await user.click(screen.getByRole('tab', { name: 'List' }));
+    await user.click(screen.getByRole('button', { name: 'List' }));
     expect(await screen.findByText('1 apartment')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: new RegExp(RIVER_2BR.title) })).toBeInTheDocument();
     expect(screen.queryByText(SEA_VIEW.title)).not.toBeInTheDocument();
@@ -138,7 +137,7 @@ describe('list view', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(20);
     const card = screen.getByRole('link', { name: /Listing 1\b/ });
     expect(within(card).getByText('Available')).toBeInTheDocument();
-    expect(within(card).getByText('Studio')).toBeInTheDocument();
+    expect(within(card).getByText('Studio · Sơn Trà')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Loading more…' }));
     await waitFor(() => {
@@ -171,7 +170,7 @@ describe('language', () => {
     await user.click(screen.getByRole('button', { name: 'Русский' }));
 
     expect(await screen.findByText('3 квартиры в этой области')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Список' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Список' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^12\sмлн ₫/ })).toBeInTheDocument();
     expect(localStorage.getItem('dna.language')).toBe('ru');
   });

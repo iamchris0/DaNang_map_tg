@@ -10,6 +10,8 @@ export default defineConfig({
   testDir: './e2e',
   expect: { timeout: 10_000 },
   fullyParallel: true,
+  // WebGL is software-rendered (SwiftShader) in headless runs; more parallel maps starve the CPU.
+  workers: 2,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',

@@ -3,7 +3,11 @@ import type { FieldError } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 const CONTROL =
-  'w-full rounded-xl border bg-bg px-3 text-base outline-none focus:border-accent aria-[invalid=true]:border-danger';
+  'block w-full rounded-xl border border-line bg-bg px-4 text-base outline-none transition-colors focus:border-fg focus:shadow-[inset_0_0_0_1px_var(--app-text)] aria-[invalid=true]:border-danger';
+
+// Native select arrow replaced by a consistent chevron (same size/position on every OS).
+const CHEVRON =
+  "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23717171' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")";
 
 function useErrorText(error: FieldError | undefined): string | null {
   const { t } = useTranslation();
@@ -24,7 +28,7 @@ function FieldShell({ label, error, hint, children }: FieldShellProps) {
   const describedBy = message ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
     <div className="space-y-1">
-      <label htmlFor={id} className="block text-sm font-medium">
+      <label htmlFor={id} className="block text-sm leading-tight font-semibold">
         {label}
       </label>
       {children({ id, describedBy })}
@@ -57,7 +61,7 @@ export function TextField({ label, error, hint, className = '', ...props }: Inpu
           id={id}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
-          className={`${CONTROL} border-hint/30 min-h-11 ${className}`}
+          className={`${CONTROL} h-12 ${className}`}
           {...props}
         />
       )}
@@ -79,7 +83,7 @@ export function TextAreaField({ label, error, ...props }: TextAreaProps) {
           rows={4}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
-          className={`${CONTROL} border-hint/30 py-2`}
+          className={`${CONTROL} py-3`}
           {...props}
         />
       )}
@@ -101,7 +105,8 @@ export function SelectField({ label, error, options, ...props }: SelectProps) {
           id={id}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
-          className={`${CONTROL} border-hint/30 min-h-11`}
+          className={`${CONTROL} h-12 appearance-none bg-[length:16px] bg-[right_1rem_center] bg-no-repeat pr-10`}
+          style={{ backgroundImage: CHEVRON }}
           {...props}
         >
           {options.map((option) => (
@@ -117,7 +122,7 @@ export function SelectField({ label, error, options, ...props }: SelectProps) {
 
 export function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="bg-surface space-y-3 rounded-2xl p-4">
+    <section className="border-line bg-bg space-y-4 rounded-2xl border p-4 lg:p-6">
       <h2 className="text-lg font-semibold">{title}</h2>
       {children}
     </section>

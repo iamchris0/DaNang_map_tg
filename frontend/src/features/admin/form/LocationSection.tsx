@@ -135,15 +135,22 @@ export function LocationSection({
 
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">{t('admin.location.precision')}</legend>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {(['exact', 'approximate'] as const).map((value) => (
             <label
               key={value}
-              className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 ${
-                precision === value ? 'border-accent' : 'border-hint/30'
+              className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${
+                precision === value
+                  ? 'border-fg shadow-[inset_0_0_0_1px_var(--app-text)]'
+                  : 'border-line'
               }`}
             >
-              <input type="radio" value={value} {...register('location_precision')} />
+              <input
+                type="radio"
+                value={value}
+                className="size-4 accent-[var(--app-text)]"
+                {...register('location_precision')}
+              />
               {t(`admin.location.${value}`)}
             </label>
           ))}

@@ -103,7 +103,7 @@ describe('listing form', () => {
     expect(screen.getByText('13,500,000 ₫')).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('District'), 'Sơn Trà');
     await user.selectOptions(screen.getByLabelText('Bedrooms'), 'Studio');
-    expect(screen.getByText('Save the draft first, then add photos.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add photos' })).toBeInTheDocument();
 
     await user.type(
       screen.getByRole('searchbox', { name: 'Search address or landmark' }),

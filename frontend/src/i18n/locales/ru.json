@@ -43,7 +43,28 @@
       "newest": "Сначала новые",
       "price_asc": "Сначала дешевле",
       "price_desc": "Сначала дороже"
-    }
+    },
+    "search": "Поиск квартир",
+    "anywhere": "Весь Дананг",
+    "anyRent": "Любая цена",
+    "anySize": "Любая площадь",
+    "where": "Где",
+    "rent": "Аренда",
+    "size": "Комнаты",
+    "showMap": "Карта",
+    "showList": "Список",
+    "inMapArea_one": "{{count}} квартира на участке карты",
+    "inMapArea_few": "{{count}} квартиры на участке карты",
+    "inMapArea_many": "{{count}} квартир на участке карты",
+    "inMapArea_other": "{{count}} квартиры на участке карты",
+    "pricesNote": "Цены указаны за месяц",
+    "districtsMore_one": "{{first}} +{{count}}",
+    "districtsMore_few": "{{first}} +{{count}}",
+    "districtsMore_many": "{{first}} +{{count}}",
+    "districtsMore_other": "{{first}} +{{count}}",
+    "rentFrom": "от {{min}}",
+    "rentUpTo": "до {{max}}",
+    "quickFilters": "Быстрые фильтры"
   },
   "map": {
     "label": "Карта квартир в Дананге",
@@ -95,7 +116,16 @@
     "notFound": "Такого объявления нет.",
     "unavailable": "Эта квартира больше не сдаётся.",
     "loadError": "Не удалось загрузить квартиру.",
-    "browse": "Смотреть квартиры"
+    "browse": "Смотреть квартиры",
+    "bathroomsShort_one": "{{count}} санузел",
+    "bathroomsShort_few": "{{count}} санузла",
+    "bathroomsShort_many": "{{count}} санузлов",
+    "bathroomsShort_other": "{{count}} санузла",
+    "contact": "Связаться",
+    "monthShort": "мес.",
+    "about": "Об этом жилье",
+    "whereYoullLive": "Где вы будете жить",
+    "terms": "Условия аренды"
   },
   "filters": {
     "title": "Фильтры",
@@ -200,7 +230,7 @@
       "description": "Описание",
       "conditions": "Условия аренды",
       "deposit": "Депозит, ₫",
-      "minMonths": "Минимальный срок, мес.",
+      "minMonths": "Мин. срок, мес.",
       "contactType": "Тип контакта",
       "contactNone": "Без контакта агента",
       "contactTypes": {
@@ -258,7 +288,6 @@
     "photos": {
       "add": "Добавить фото",
       "hint": "JPEG, PNG или WebP · до {{size}} МБ · не больше {{max}} фото",
-      "saveFirst": "Сначала сохраните черновик, затем добавьте фото.",
       "cover": "Обложка",
       "makeCover": "Сделать обложкой",
       "moveEarlier": "Переместить раньше",
@@ -275,7 +304,8 @@
       "rejected": "{{name}}: {{reason}}",
       "tooLarge": "больше {{size}} МБ",
       "wrongType": "не JPEG, PNG или WebP",
-      "tooMany": "достигнут лимит фото"
+      "tooMany": "достигнут лимит фото",
+      "uploadingProgress": "Загружаем фото {{current}}/{{total}}…"
     },
     "errors": {
       "listing_incomplete": "Не заполнены обязательные поля: {{fields}}",

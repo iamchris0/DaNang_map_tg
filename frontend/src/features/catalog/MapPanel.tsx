@@ -13,7 +13,15 @@ import { ApartmentPreview } from './ApartmentPreview';
 const MapView = lazy(() => import('@/features/map/MapView'));
 const NO_MARKERS: MapMarker[] = [];
 
-export function MapPanel({ filters, onReset }: { filters: CatalogFilters; onReset: () => void }) {
+interface Props {
+  filters: CatalogFilters;
+  onReset: () => void;
+  /** Reports the visible area (debounced), e.g. so the list can follow the map. */
+  onViewportChange?: (bbox: BBox) => void;
+  showCount?: boolean;
+}
+
+export function MapPanel({ filters, onReset, onViewportChange, showCount = true }: Props) {
   const { t } = useTranslation();
   const [bbox, setBbox] = useState<BBox | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -24,7 +32,7 @@ export function MapPanel({ filters, onReset }: { filters: CatalogFilters; onRese
     <div className="relative h-full">
       <Suspense
         fallback={
-          <div className="text-hint flex h-full items-center justify-center">
+          <div className="bg-surface text-hint flex h-full items-center justify-center">
             <Spinner />
           </div>
         }
@@ -33,14 +41,21 @@ export function MapPanel({ filters, onReset }: { filters: CatalogFilters; onRese
           markers={markers}
           selectedId={selectedId}
           onSelect={setSelectedId}
-          onViewportChange={setBbox}
+          onViewportChange={(next) => {
+            setBbox(next);
+            onViewportChange?.(next);
+          }}
         />
       </Suspense>
 
-      <div className="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
+      <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3">
         <div
           role="status"
-          className="bg-bg/95 pointer-events-auto flex max-w-full items-center gap-2 rounded-full px-3 py-1.5 text-sm shadow-md"
+          className={`bg-bg shadow-card pointer-events-auto flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
+            showCount || query.isError || query.data?.total === 0 || query.data?.truncated
+              ? ''
+              : 'sr-only'
+          }`}
         >
           {query.isFetching && <Spinner className="size-3.5" />}
           {query.isError ? (
@@ -48,7 +63,7 @@ export function MapPanel({ filters, onReset }: { filters: CatalogFilters; onRese
               <span>{t('catalog.loadError')}</span>
               <button
                 type="button"
-                className="text-accent font-medium"
+                className="text-accent underline"
                 onClick={() => void query.refetch()}
               >
                 {t('common.retry')}
@@ -57,12 +72,8 @@ export function MapPanel({ filters, onReset }: { filters: CatalogFilters; onRese
           ) : query.data ? (
             query.data.total === 0 ? (
               <>
-                <span>{t('catalog.emptyArea')}</span>
-                <button
-                  type="button"
-                  className="text-accent shrink-0 font-medium"
-                  onClick={onReset}
-                >
+                <span className="font-normal">{t('catalog.emptyArea')}</span>
+                <button type="button" className="shrink-0 underline" onClick={onReset}>
                   {t('catalog.resetFilters')}
                 </button>
               </>

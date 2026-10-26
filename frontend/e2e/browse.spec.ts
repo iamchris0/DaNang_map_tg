@@ -1,10 +1,20 @@
 import { RIVER_2BR, SEA_VIEW } from '../src/test/fixtures';
 import { expect, test } from './fixtures';
+import type { Page } from '@playwright/test';
 
-test('browse the map, preview a listing and open its details', async ({ page }) => {
+/** Phones show the count on the map; desktop shows it above the list next to the map. */
+async function expectAreaCount(page: Page, isMobile: boolean, count: number) {
+  const text = isMobile
+    ? `${count} apartments in this area`
+    : `${count} apartments in this map area`;
+  // First map render (lazy chunk + software WebGL) can be slow on CI machines.
+  await expect(page.getByText(text, { exact: true })).toBeVisible({ timeout: 20_000 });
+}
+
+test('browse the map, preview a listing and open its details', async ({ page, isMobile }) => {
   await page.goto('/');
   const map = page.getByRole('region', { name: 'Map of apartments in Da Nang' });
-  await expect(page.getByText('3 apartments in this area')).toBeVisible();
+  await expectAreaCount(page, isMobile, 3);
   // Real MapLibre canvas plus our HTML markers. The two beach listings are close
   // together, so at city zoom they form a cluster; tapping it zooms in and splits it.
   await expect(map.locator('canvas.maplibregl-canvas')).toBeVisible();
@@ -29,27 +39,28 @@ test('browse the map, preview a listing and open its details', async ({ page }) 
   await expect(map.getByRole('button', { name: /^12M ₫/ })).toBeVisible();
 });
 
-test('filters apply to both map and list views', async ({ page }) => {
+test('filters apply to both map and list views', async ({ page, isMobile }) => {
   await page.goto('/');
-  await expect(page.getByText('3 apartments in this area')).toBeVisible();
+  const map = page.getByRole('region', { name: 'Map of apartments in Da Nang' });
+  await expectAreaCount(page, isMobile, 3);
 
-  await page.getByRole('button', { name: 'Filters' }).click();
+  await page.getByRole('button', { name: 'Filters', exact: true }).click();
   const sheet = page.getByRole('dialog', { name: 'Filters' });
   await sheet.getByRole('button', { name: '2', exact: true }).click();
   await sheet.getByRole('button', { name: 'Show 1 apartment' }).click();
 
   await expect(page).toHaveURL('/?bedrooms=2');
-  await expect(page.getByText('1 apartment in this area')).toBeVisible();
-  const map = page.getByRole('region', { name: 'Map of apartments in Da Nang' });
   await expect(map.getByRole('button', { name: /M ₫/ })).toHaveCount(1);
+  // Quick-filter chip reflects the same state.
+  await expect(page.getByRole('button', { name: '2 bedrooms', pressed: true })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'List' }).click();
-  await expect(page.getByText('1 apartment', { exact: true })).toBeVisible();
+  // Phones switch to the list; desktop shows it next to the map.
+  if (isMobile) await page.getByRole('button', { name: 'List', exact: true }).click();
   await expect(page.getByRole('link', { name: new RegExp(RIVER_2BR.title) })).toBeVisible();
+  await expect(page.getByRole('link', { name: new RegExp(SEA_VIEW.title) })).toHaveCount(0);
 
   // Filters survive a reload because they live in the URL.
   await page.reload();
-  await expect(page.getByRole('link', { name: new RegExp(RIVER_2BR.title) })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Filters, 1 active' })).toBeVisible();
 });
 
@@ -66,9 +77,9 @@ test('deep links open the listing and unknown ids are handled', async ({ page })
 
 test('switching language translates the interface', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByText('3 apartments in this area')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Русский' }).click();
-  await expect(page.getByText('3 квартиры в этой области')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Фильтры', exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('tab', { name: 'Карта' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Студия' })).toBeVisible();
 });

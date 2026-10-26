@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import AppSettings, CurrentUser, DbSession, limit_auth
 from app.api.errors import AppError
@@ -21,6 +21,9 @@ from app.schemas.auth import (
 from app.services.users import is_admin, upsert_telegram_user
 
 logger = logging.getLogger(__name__)
+
+# Present when a request was forwarded by a proxy/tunnel (Cloudflare, nginx, Caddy…).
+PROXY_HEADERS = ("cf-connecting-ip", "x-forwarded-for", "forwarded", "x-real-ip")
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -69,10 +72,17 @@ async def telegram_login(
 
 
 @router.post("/dev", response_model=AuthResponse, dependencies=[Depends(limit_auth)])
-async def dev_login(body: DevAuthRequest, db: DbSession, settings: AppSettings) -> AuthResponse:
+async def dev_login(
+    body: DevAuthRequest, request: Request, db: DbSession, settings: AppSettings
+) -> AuthResponse:
     """Local development login without Telegram. Disabled unless DEV_AUTH_ENABLED=true,
-    and never available in production (enforced at startup)."""
-    if not settings.dev_auth_enabled or settings.is_production:
+    never available in production (enforced at startup), and refused for requests that
+    arrive through a proxy or tunnel (e.g. a public HTTPS tunnel for testing in Telegram)."""
+    if (
+        not settings.dev_auth_enabled
+        or settings.is_production
+        or any(header in request.headers for header in PROXY_HEADERS)
+    ):
         raise AppError("not_found", "Not Found", status_code=404)
     tg_user = TelegramWebAppUser(
         id=body.telegram_user_id,

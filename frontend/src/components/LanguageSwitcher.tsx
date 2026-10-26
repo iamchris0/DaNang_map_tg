@@ -11,7 +11,7 @@ export function LanguageSwitcher() {
     <div
       role="group"
       aria-label={t('language.label')}
-      className="bg-surface flex shrink-0 rounded-full p-0.5"
+      className="border-line bg-bg flex shrink-0 rounded-full border p-0.5"
     >
       {SUPPORTED_LANGUAGES.map((language) => {
         const active = i18n.resolvedLanguage === language;
@@ -25,8 +25,8 @@ export function LanguageSwitcher() {
               void changeLanguage(language);
               saveLanguage(language);
             }}
-            className={`min-h-9 min-w-10 rounded-full px-2 text-xs font-semibold transition-colors ${
-              active ? 'bg-accent text-accent-fg' : 'text-hint'
+            className={`min-h-8 min-w-9 rounded-full px-2 text-xs font-bold transition-colors ${
+              active ? 'bg-fg text-bg' : 'text-hint hover:text-fg'
             }`}
           >
             {language.toUpperCase()}

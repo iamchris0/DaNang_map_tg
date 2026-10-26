@@ -1,50 +1,37 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { uploadImage, useImageMutations } from '@/api/admin';
 import type { Image } from '@/api/types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  PlusIcon,
-  StarIcon,
-  TrashIcon,
-} from '@/components/ui/icons';
 import { useToast } from '@/components/ui/toastContext';
 
 import { adminErrorMessage } from '../errors';
+import { MAX_PHOTOS, rejectionText, type RejectReason, screenFiles } from './photoRules';
+import { PhotoTiles, type Tile } from './PhotoTiles';
 
-// Match the backend defaults (IMAGE_MAX_PER_LISTING, IMAGE_MAX_UPLOAD_MB); the backend
-// enforces the real limits.
-export const MAX_PHOTOS = 15;
-export const MAX_UPLOAD_MB = 10;
-const ACCEPTED = ['image/jpeg', 'image/png', 'image/webp'];
-
-interface Upload {
-  key: string;
-  name: string;
-  progress: number;
-}
-
-interface Props {
-  apartmentId: string;
-  images: Image[];
-}
-
-export function PhotoManager({ apartmentId, images }: Props) {
+function useRejectToast() {
   const { t } = useTranslation();
   const toast = useToast();
-  const input = useRef<HTMLInputElement>(null);
+  return (name: string, reason: RejectReason) => {
+    toast(t('admin.photos.rejected', { name, reason: rejectionText(t, reason) }), 'error');
+  };
+}
+
+/** Photos of a saved listing: changes apply immediately via the API. */
+export function PhotoManager({ apartmentId, images }: { apartmentId: string; images: Image[] }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const reject = useRejectToast();
   const { reorder, remove, refresh } = useImageMutations(apartmentId);
-  const [uploads, setUploads] = useState<Upload[]>([]);
+  const [uploads, setUploads] = useState<Tile[]>([]);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
-  const move = (index: number, target: number) => {
+  const move = (from: number, to: number) => {
     const ids = images.map((image) => image.id);
-    const [moved] = ids.splice(index, 1);
+    const [moved] = ids.splice(from, 1);
     if (moved === undefined) return;
-    ids.splice(target, 0, moved);
+    ids.splice(to, 0, moved);
     reorder.mutate(ids, {
       onError: (error) => {
         toast(adminErrorMessage(t, error), 'error');
@@ -52,38 +39,22 @@ export function PhotoManager({ apartmentId, images }: Props) {
     });
   };
 
-  const addFiles = async (files: File[]) => {
-    const accepted: File[] = [];
-    let room = MAX_PHOTOS - images.length - uploads.length;
-    for (const file of files) {
-      let reason: string | null = null;
-      if (!ACCEPTED.includes(file.type)) reason = t('admin.photos.wrongType');
-      else if (file.size > MAX_UPLOAD_MB * 1024 * 1024)
-        reason = t('admin.photos.tooLarge', { size: MAX_UPLOAD_MB });
-      else if (room <= 0) reason = t('admin.photos.tooMany');
-      if (reason) toast(t('admin.photos.rejected', { name: file.name, reason }), 'error');
-      else {
-        accepted.push(file);
-        room -= 1;
-      }
-    }
+  const add = async (files: File[]) => {
+    const accepted = screenFiles(files, MAX_PHOTOS - images.length - uploads.length, reject);
     const queued = accepted.map((file, index) => ({
       key: `${Date.now()}-${index}-${file.name}`,
-      name: file.name,
+      src: URL.createObjectURL(file),
       progress: 0,
     }));
     setUploads((current) => [...current, ...queued]);
-
     let uploaded = 0;
     // Sequential uploads keep the order and give clear per-file progress on mobile data.
     for (const [index, file] of accepted.entries()) {
-      const key = queued[index]?.key;
+      const tile = queued[index];
       try {
         await uploadImage(apartmentId, file, (fraction) => {
           setUploads((current) =>
-            current.map((upload) =>
-              upload.key === key ? { ...upload, progress: fraction } : upload,
-            ),
+            current.map((u) => (u.key === tile?.key ? { ...u, progress: fraction } : u)),
           );
         });
         uploaded += 1;
@@ -94,123 +65,32 @@ export function PhotoManager({ apartmentId, images }: Props) {
           'error',
         );
       } finally {
-        setUploads((current) => current.filter((upload) => upload.key !== key));
+        if (tile) URL.revokeObjectURL(tile.src);
+        setUploads((current) => current.filter((u) => u.key !== tile?.key));
       }
     }
     if (uploaded > 0) toast(t('admin.photos.uploaded', { count: uploaded }));
   };
 
+  const tiles: Tile[] = [
+    ...images.map((image) => ({ key: image.id, src: image.thumb_url })),
+    ...uploads,
+  ];
+
   return (
-    <div className="space-y-3">
-      <p className="text-hint text-sm">
-        {t('admin.photos.hint', { size: MAX_UPLOAD_MB, max: MAX_PHOTOS })} · {images.length}/
-        {MAX_PHOTOS}
-      </p>
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {images.map((image, index) => (
-          <li key={image.id} className="bg-bg overflow-hidden rounded-xl">
-            <div className="relative">
-              <img
-                src={image.thumb_url}
-                alt={t('admin.photos.photoAlt', { index: index + 1 })}
-                className="aspect-[4/3] w-full object-cover"
-                loading="lazy"
-              />
-              {index === 0 && (
-                <span className="bg-accent text-accent-fg absolute top-1.5 left-1.5 rounded-full px-2 py-0.5 text-xs font-semibold">
-                  {t('admin.photos.cover')}
-                </span>
-              )}
-            </div>
-            <div className="flex justify-between p-1">
-              <button
-                type="button"
-                aria-label={t('admin.photos.moveEarlier')}
-                disabled={index === 0 || reorder.isPending}
-                onClick={() => {
-                  move(index, index - 1);
-                }}
-                className="flex size-10 items-center justify-center rounded-lg disabled:opacity-30"
-              >
-                <ArrowLeftIcon width={18} height={18} />
-              </button>
-              <button
-                type="button"
-                aria-label={t('admin.photos.makeCover')}
-                disabled={index === 0 || reorder.isPending}
-                onClick={() => {
-                  move(index, 0);
-                }}
-                className="flex size-10 items-center justify-center rounded-lg disabled:opacity-30"
-              >
-                <StarIcon width={18} height={18} />
-              </button>
-              <button
-                type="button"
-                aria-label={t('admin.photos.moveLater')}
-                disabled={index === images.length - 1 || reorder.isPending}
-                onClick={() => {
-                  move(index, index + 1);
-                }}
-                className="flex size-10 items-center justify-center rounded-lg disabled:opacity-30"
-              >
-                <ArrowRightIcon width={18} height={18} />
-              </button>
-              <button
-                type="button"
-                aria-label={t('admin.photos.remove')}
-                onClick={() => {
-                  setConfirmRemove(image.id);
-                }}
-                className="text-danger flex size-10 items-center justify-center rounded-lg"
-              >
-                <TrashIcon width={18} height={18} />
-              </button>
-            </div>
-          </li>
-        ))}
-        {uploads.map((upload) => (
-          <li
-            key={upload.key}
-            className="bg-bg flex aspect-[4/3] flex-col justify-end gap-1 rounded-xl p-2"
-          >
-            <span className="truncate text-xs">
-              {t('admin.photos.uploading', { name: upload.name })}
-            </span>
-            <progress
-              value={upload.progress}
-              max={1}
-              aria-label={upload.name}
-              className="accent-accent h-1.5 w-full"
-            />
-          </li>
-        ))}
-      </ul>
-
-      <input
-        ref={input}
-        type="file"
-        multiple
-        accept={ACCEPTED.join(',')}
-        className="sr-only"
-        data-testid="photo-input"
-        tabIndex={-1}
-        onChange={(event) => {
-          const files = Array.from(event.target.files ?? []);
-          event.target.value = '';
-          void addFiles(files);
+    <>
+      <PhotoTiles
+        tiles={tiles}
+        busy={reorder.isPending}
+        onMove={(from, to) => {
+          if (from < images.length && to < images.length) move(from, to);
         }}
+        onRemove={(index) => {
+          const image = images[index];
+          if (image) setConfirmRemove(image.id);
+        }}
+        onAdd={(files) => void add(files)}
       />
-      <button
-        type="button"
-        disabled={images.length + uploads.length >= MAX_PHOTOS}
-        onClick={() => input.current?.click()}
-        className="border-accent/50 text-accent flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed font-semibold disabled:opacity-40"
-      >
-        <PlusIcon />
-        {t('admin.photos.add')}
-      </button>
-
       <ConfirmDialog
         open={confirmRemove !== null}
         title={t('admin.photos.removeTitle')}
@@ -233,6 +113,58 @@ export function PhotoManager({ apartmentId, images }: Props) {
           });
         }}
       />
-    </div>
+    </>
+  );
+}
+
+export interface StagedPhoto {
+  key: string;
+  file: File;
+  src: string;
+}
+
+/** Photos chosen for a listing that doesn't exist yet; uploaded right after it's created. */
+export function StagedPhotoManager({
+  photos,
+  onChange,
+  progress,
+}: {
+  photos: StagedPhoto[];
+  onChange: (photos: StagedPhoto[]) => void;
+  progress: Record<string, number>;
+}) {
+  const reject = useRejectToast();
+  return (
+    <PhotoTiles
+      tiles={photos.map((photo) => ({
+        key: photo.key,
+        src: photo.src,
+        ...(photo.key in progress ? { progress: progress[photo.key] } : {}),
+      }))}
+      busy={Object.keys(progress).length > 0}
+      onMove={(from, to) => {
+        const next = [...photos];
+        const [moved] = next.splice(from, 1);
+        if (!moved) return;
+        next.splice(to, 0, moved);
+        onChange(next);
+      }}
+      onRemove={(index) => {
+        const removed = photos[index];
+        if (removed) URL.revokeObjectURL(removed.src);
+        onChange(photos.filter((_, i) => i !== index));
+      }}
+      onAdd={(files) => {
+        const accepted = screenFiles(files, MAX_PHOTOS - photos.length, reject);
+        onChange([
+          ...photos,
+          ...accepted.map((file, index) => ({
+            key: `${Date.now()}-${index}-${file.name}`,
+            file,
+            src: URL.createObjectURL(file),
+          })),
+        ]);
+      }}
+    />
   );
 }

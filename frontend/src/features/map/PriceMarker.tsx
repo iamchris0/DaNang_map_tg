@@ -26,11 +26,13 @@ export function PriceMarker({ marker, selected, onSelect }: Props) {
       onClick={() => {
         onSelect(marker.id);
       }}
-      className={`relative min-h-8 rounded-full border-2 px-2.5 py-1 text-[13px] leading-none font-bold whitespace-nowrap shadow-md transition-transform active:scale-95 ${
+      className={`shadow-card relative min-h-8 rounded-full px-3 py-1.5 text-sm leading-none font-bold whitespace-nowrap transition-transform hover:scale-105 active:scale-95 ${
         selected
-          ? 'border-accent bg-accent text-accent-fg scale-110'
-          : 'border-white bg-white text-neutral-900'
-      } ${approximate && !selected ? 'border-dashed border-neutral-400' : ''}`}
+          ? 'bg-ink text-ink-fg scale-110'
+          : approximate
+            ? 'border-hint bg-bg text-fg border border-dashed'
+            : 'bg-bg text-fg'
+      }`}
     >
       {approximate ? '~' : ''}
       {price}

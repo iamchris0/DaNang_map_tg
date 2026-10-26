@@ -31,13 +31,19 @@ export function useMapMarkers(bbox: BBox | null, filters: CatalogFilters) {
   });
 }
 
-export function useApartmentList(filters: CatalogFilters, sort: CatalogSort) {
+/** `bbox` limits results to the visible map area (desktop split view). */
+export function useApartmentList(
+  filters: CatalogFilters,
+  sort: CatalogSort,
+  bbox: BBox | null = null,
+) {
   return useInfiniteQuery({
-    queryKey: ['apartments', 'list', filters, sort],
+    queryKey: ['apartments', 'list', filters, sort, bbox],
     queryFn: ({ pageParam, signal }) =>
       apiFetch<Page<ApartmentCard>>(
         `/api/apartments${buildQuery({
           ...filtersToQuery(filters),
+          bbox: bbox?.join(','),
           sort,
           page: pageParam,
           page_size: PAGE_SIZE,

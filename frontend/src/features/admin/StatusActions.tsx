@@ -44,7 +44,7 @@ export function StatusActions({ apartmentId, status, compact = false }: Props) {
 
   return (
     <>
-      <div className="flex flex-wrap gap-2">
+      <div className="grid auto-cols-fr grid-flow-col gap-2">
         {TRANSITIONS[status].map((target) => (
           <button
             key={target}

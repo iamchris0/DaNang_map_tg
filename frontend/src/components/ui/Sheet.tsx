@@ -62,7 +62,7 @@ export function Sheet({
         aria-modal={modal}
         aria-label={title}
         style={dragY ? { transform: `translateY(${dragY}px)` } : undefined}
-        className={`${modal ? 'fixed z-40' : 'absolute z-20'} ${placement} bg-bg text-fg flex flex-col rounded-t-2xl shadow-[0_-4px_24px_rgba(0,0,0,0.18)]`}
+        className={`${modal ? 'fixed z-40' : 'absolute z-20'} ${placement} bg-bg text-fg shadow-card flex flex-col rounded-t-3xl md:rounded-3xl`}
       >
         <div
           className="flex cursor-grab touch-none justify-center pt-2 pb-1 md:hidden"
@@ -89,7 +89,7 @@ export function Sheet({
             type="button"
             onClick={onClose}
             aria-label={t('common.close')}
-            className="bg-surface/90 text-hint flex size-9 items-center justify-center rounded-full"
+            className="bg-bg/95 text-fg shadow-card flex size-9 items-center justify-center rounded-full"
           >
             <CloseIcon />
           </button>
@@ -98,7 +98,7 @@ export function Sheet({
           {children}
         </div>
         {footer && (
-          <footer className="border-hint/15 border-t px-4 pt-3 pb-[max(0.75rem,var(--safe-bottom))]">
+          <footer className="border-line border-t px-4 pt-3 pb-[max(0.75rem,var(--safe-bottom))]">
             {footer}
           </footer>
         )}
