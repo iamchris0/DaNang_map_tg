@@ -7,6 +7,9 @@ import { defineConfig, loadEnv } from 'vite';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  // Photos are served from this origin under /media (proxied to local S3 storage), so they
+  // also load when the app is opened through an HTTPS tunnel inside Telegram.
+  const media = new URL(env.VITE_MEDIA_PROXY_TARGET || 'http://localhost:9000/danang-apartments');
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
@@ -28,6 +31,11 @@ export default defineConfig(({ mode }) => {
       ...(env.VITE_USE_POLLING === 'true' && { watch: { usePolling: true, interval: 300 } }),
       proxy: {
         '/api': { target: env.VITE_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true },
+        '/media': {
+          target: media.origin,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/media/, media.pathname.replace(/\/$/, '')),
+        },
       },
     },
     test: {
