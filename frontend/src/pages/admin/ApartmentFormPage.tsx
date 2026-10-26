@@ -26,6 +26,7 @@ import {
 } from '@/features/admin/form/schema';
 import { StatusActions } from '@/features/admin/StatusActions';
 import { StatusBadge } from '@/features/admin/StatusBadge';
+import { TelegramPanel } from '@/features/admin/telegram/TelegramPanel';
 import { districtName, formatPriceFull } from '@/lib/format';
 import { setClosingConfirmation } from '@/telegram/webapp';
 
@@ -173,6 +174,9 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
       </h2>
 
       {apartment.data && <StatusPanel apartment={apartment.data} />}
+      {apartment.data && (
+        <TelegramPanel apartmentId={apartment.data.id} status={apartment.data.status} />
+      )}
 
       <FormSection title={t('admin.form.sections.basics')}>
         <TextField

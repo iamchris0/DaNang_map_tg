@@ -5,6 +5,8 @@ from typing import Annotated, Self
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from app.models.enums import Language
+
 
 class Environment(StrEnum):
     DEVELOPMENT = "development"
@@ -51,7 +53,11 @@ class Settings(BaseSettings):
     telegram_bot_username: str = ""
     telegram_mini_app_short_name: str = ""
     telegram_channel_id: str = ""
-    telegram_post_language: str = "en"
+    telegram_post_language: Language = Language.EN
+    telegram_request_timeout_seconds: int = 60
+    # A "pending" publication older than this is treated as unconfirmed (process crashed or
+    # hung mid-request); an administrator then confirms the outcome manually.
+    telegram_pending_timeout_seconds: int = 300
     admin_contact_telegram: str = ""
 
     # S3-compatible object storage

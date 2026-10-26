@@ -184,3 +184,33 @@ the status panel shows its `missing_fields`, and server errors are mapped to tra
 messages by error code. Photos need a saved listing, so the first save creates a draft and
 opens the edit page. The admin chunk (forms, validation) is lazy-loaded and never
 downloaded by regular users.
+
+## D26. Duplicate-safe channel publishing
+
+Publishing records a `pending` attempt (committed) before calling Telegram, then calls the
+Bot API outside any database transaction. Three safeguards prevent duplicate posts:
+
+1. a client `Idempotency-Key` (unique column): a repeated request returns the stored attempt;
+2. a partial unique index: at most one `pending`/`succeeded`/`unknown` publication per
+   listing and channel, so concurrent requests cannot both post;
+3. an explicit outcome taxonomy: Telegram's definite rejections are `failed` (safe to try
+   again); anything that might have been delivered (timeouts, dropped connections,
+   Telegram 5xx, crashes) is `unknown` and blocks further attempts until an administrator
+   confirms what happened. Nothing is ever retried automatically.
+
+Error reasons are stored as stable codes (`error_code`) plus the raw Telegram message.
+
+## D27. Photos are uploaded, not linked
+
+The backend reads the large WebP variant from storage, re-encodes it as JPEG and uploads
+the bytes to Telegram (album for 2–10 photos). Telegram never needs to fetch our storage
+URLs, so it works with private buckets and in local development, and JPEG avoids
+format surprises in Telegram clients.
+
+## D28. Bot process
+
+The API sends channel posts itself (`aiogram.Bot`, shared session closed on shutdown). A
+separate long-polling process (`python -m app.bot`, Compose service `bot`) handles user
+conversations: `/start` (optionally with a listing id) replies with a Mini App button,
+and the chat menu button opens the Mini App. Mini App buttons require an HTTPS
+`PUBLIC_APP_URL`, which arrives with the Phase 6 deployment.

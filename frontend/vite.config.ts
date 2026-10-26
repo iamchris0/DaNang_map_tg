@@ -12,9 +12,11 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },
-    // The map is lazy-loaded; pre-bundle its deps up front so the dev server doesn't
-    // discover them on first use and force a page reload.
-    optimizeDeps: { include: ['maplibre-gl', 'supercluster'] },
+    // The map and admin pages are lazy-loaded; pre-bundle their deps up front so the dev
+    // server doesn't discover them on first use and force a page reload (losing input).
+    optimizeDeps: {
+      include: ['maplibre-gl', 'supercluster', 'react-hook-form', 'zod', '@hookform/resolvers/zod'],
+    },
     // MapLibre (~1 MB, ~290 kB gzipped) is its own lazy chunk, loaded with the map.
     build: { chunkSizeWarningLimit: 1200 },
     server: {

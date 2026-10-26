@@ -5,6 +5,7 @@ import type {
   ApartmentStatus,
   GeocodeResult,
   Image,
+  Publication,
 } from '@/api/types';
 import { setSessionToken } from '@/api/session';
 
@@ -124,11 +125,23 @@ export function installFakeAdminApi(initial: Partial<Stored>[] = [], { isAdmin =
     publication_status: null,
   });
 
-  const requests: { method: string; path: string; body: unknown }[] = [];
+  const requests: { method: string; path: string; body: unknown; headers: Headers }[] = [];
 
-  const handle = (method: string, url: URL, body: unknown): Response => {
+  // Telegram publishing: outcomes for the next publish calls ('network' = connection lost
+  // after the server stored the result), publications per idempotency key.
+  const telegram = {
+    configured: true,
+    outcomes: [] as ('succeeded' | 'failed' | 'unknown' | 'network')[],
+    publications: [] as (Publication & { apartment_id: string })[],
+    byKey: new Map<string, Publication & { apartment_id: string }>(),
+  };
+  const livePublication = (apartmentId: string) =>
+    telegram.publications.find((p) => p.apartment_id === apartmentId && p.status !== 'failed') ??
+    null;
+
+  const handle = (method: string, url: URL, body: unknown, headers: Headers): Response => {
     const path = url.pathname;
-    requests.push({ method, path, body });
+    requests.push({ method, path, body, headers });
     if (path === '/api/auth/me') {
       return json({
         id: 'admin-user',
@@ -194,6 +207,70 @@ export function installFakeAdminApi(initial: Partial<Stored>[] = [], { isAdmin =
       apartment.status = target;
       return json(toAdmin(apartment));
     }
+    if (rest === '/telegram-preview') {
+      const blockers = [
+        ...(telegram.configured ? [] : ['telegram_not_configured']),
+        ...(apartment.status === 'available' ? [] : ['listing_not_available']),
+        ...(livePublication(apartment.id) ? ['already_published'] : []),
+      ];
+      return json({
+        caption_html: `🏠 <b>${apartment.title ?? ''}</b>\n\n💰 Rent: 12,000,000 VND/month\n\n📲 <a href="https://t.me/DaNangAptBot/app?startapp=${apartment.id}">View details and location</a>`,
+        caption_length: 120,
+        caption_limit: 1024,
+        photo_urls: apartment.images.map((image) => image.thumb_url),
+        channel_id: '@danang_rent',
+        language: 'en',
+        can_publish: blockers.length === 0,
+        blockers,
+        live_publication: livePublication(apartment.id),
+      });
+    }
+    if (rest === '/telegram-publications') {
+      return json(
+        telegram.publications
+          .filter((p) => p.apartment_id === apartment.id)
+          .slice()
+          .reverse(),
+      );
+    }
+    if (rest === '/publish-telegram') {
+      const key = headers.get('Idempotency-Key') ?? '';
+      const replay = telegram.byKey.get(key);
+      if (replay) return json(replay);
+      if (livePublication(apartment.id)) return error(409, 'already_published');
+      const outcome = telegram.outcomes.shift() ?? 'succeeded';
+      const stored = outcome === 'network' ? 'succeeded' : outcome;
+      const publication = {
+        apartment_id: apartment.id,
+        id: `pub-${telegram.publications.length + 1}`,
+        status: stored,
+        telegram_channel_id: '@danang_rent',
+        telegram_message_id: stored === 'succeeded' ? 501 : null,
+        post_url: stored === 'succeeded' ? 'https://t.me/danang_rent/501' : null,
+        error_code:
+          stored === 'failed' ? 'bot_not_admin' : stored === 'unknown' ? 'unconfirmed' : null,
+        error_message: null,
+        published_by: 'Boss',
+        created_at: '2026-10-26T10:00:00Z',
+        published_at: stored === 'succeeded' ? '2026-10-26T10:00:00Z' : null,
+      } satisfies Publication & { apartment_id: string };
+      telegram.publications.push(publication);
+      telegram.byKey.set(key, publication);
+      if (outcome === 'network') throw new TypeError('Failed to fetch');
+      return json(publication);
+    }
+    const resolveMatch = /^\/telegram-publications\/(.+)\/resolve$/.exec(rest);
+    if (resolveMatch) {
+      const publication = telegram.publications.find((p) => p.id === resolveMatch[1]);
+      if (!publication || publication.status !== 'unknown') {
+        return error(409, 'publication_not_unconfirmed');
+      }
+      publication.status = (body as { was_published: boolean }).was_published
+        ? 'succeeded'
+        : 'failed';
+      publication.error_code = publication.status === 'failed' ? 'not_published' : null;
+      return json(publication);
+    }
     if (rest === '/images/order') {
       const ids = (body as { image_ids: string[] }).image_ids;
       apartment.images = ids.map((id) => apartment.images.find((image) => image.id === id)!);
@@ -213,7 +290,11 @@ export function installFakeAdminApi(initial: Partial<Stored>[] = [], { isAdmin =
       'http://localhost',
     );
     const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
-    return Promise.resolve(handle(init?.method ?? 'GET', url, body));
+    try {
+      return Promise.resolve(handle(init?.method ?? 'GET', url, body, new Headers(init?.headers)));
+    } catch (failure) {
+      return Promise.reject(failure instanceof Error ? failure : new Error(String(failure)));
+    }
   });
 
   // Photo uploads use XMLHttpRequest (for progress events).
@@ -235,7 +316,7 @@ export function installFakeAdminApi(initial: Partial<Stored>[] = [], { isAdmin =
         this.upload.onprogress?.({ lengthComputable: true, loaded: 1, total: 2 } as ProgressEvent);
         const id = /apartments\/([^/]+)\/images/.exec(this.path)?.[1] ?? '';
         const apartment = store.get(id);
-        requests.push({ method: 'POST', path: this.path, body: file.name });
+        requests.push({ method: 'POST', path: this.path, body: file.name, headers: new Headers() });
         if (!apartment) {
           this.status = 404;
           this.responseText = JSON.stringify({ error: { code: 'listing_not_found', message: '' } });
@@ -251,5 +332,5 @@ export function installFakeAdminApi(initial: Partial<Stored>[] = [], { isAdmin =
   }
   vi.stubGlobal('XMLHttpRequest', FakeXhr);
 
-  return { store, requests };
+  return { store, requests, telegram };
 }

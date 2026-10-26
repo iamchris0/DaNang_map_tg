@@ -72,6 +72,9 @@ class MemoryStorage:
     def put(self, key: str, data: bytes, content_type: str) -> None:
         self.objects[key] = (data, content_type)
 
+    def get(self, key: str) -> bytes:
+        return self.objects[key][0]
+
     def delete(self, keys: list[str]) -> None:
         for key in keys:
             self.objects.pop(key, None)

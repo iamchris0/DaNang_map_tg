@@ -73,6 +73,8 @@ def ensure_bucket() -> None:
 class ObjectStorage(Protocol):
     def put(self, key: str, data: bytes, content_type: str) -> None: ...
 
+    def get(self, key: str) -> bytes: ...
+
     def delete(self, keys: list[str]) -> None: ...
 
 
@@ -89,6 +91,9 @@ class S3Storage:
             ContentType=content_type,
             CacheControl=IMMUTABLE_CACHE,
         )
+
+    def get(self, key: str) -> bytes:
+        return self._client.get_object(Bucket=self._bucket, Key=key)["Body"].read()
 
     def delete(self, keys: list[str]) -> None:
         if keys:

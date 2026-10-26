@@ -4,6 +4,7 @@ import { expect, test } from './fixtures';
 /** Small stateful admin backend for the browser (the real one has its own test suite). */
 test.beforeEach(async ({ page }) => {
   const apartments = new Map<string, Record<string, unknown>>();
+  const publications: Record<string, unknown>[] = [];
   let signedIn = false;
   const admin = {
     id: 'u1',
@@ -92,6 +93,10 @@ test.beforeEach(async ({ page }) => {
       }
       if (path === '/api/admin/apartments' && method === 'POST') {
         const id = '99999999-9999-4999-8999-999999999999';
+        expect(request.postDataJSON()).toMatchObject({
+          title: 'E2E beach flat',
+          price_vnd: 12_000_000,
+        });
         apartments.set(id, {
           ...(request.postDataJSON() as object),
           id,
@@ -119,6 +124,39 @@ test.beforeEach(async ({ page }) => {
         (apartment.images as unknown[]).push(image);
         return route.fulfill({ status: 201, json: image });
       }
+      if (rest === '/telegram-preview') {
+        return route.fulfill({
+          json: {
+            caption_html: `🏠 <b>${String(apartment.title)}</b>\n\n💰 Rent: 12,000,000 VND/month`,
+            caption_length: 40,
+            caption_limit: 1024,
+            photo_urls: ['/img/one-sm.png'],
+            channel_id: '@danang_rent',
+            language: 'en',
+            can_publish: publications.length === 0,
+            blockers: publications.length ? ['already_published'] : [],
+            live_publication: publications[0] ?? null,
+          },
+        });
+      }
+      if (rest === '/telegram-publications') return route.fulfill({ json: publications });
+      if (rest === '/publish-telegram') {
+        expect(request.headers()['idempotency-key']).toBeTruthy();
+        const publication = {
+          id: 'p1',
+          status: 'succeeded',
+          telegram_channel_id: '@danang_rent',
+          telegram_message_id: 7,
+          post_url: 'https://t.me/danang_rent/7',
+          error_code: null,
+          error_message: null,
+          published_by: 'Boss',
+          created_at: '2026-10-26T10:00:00Z',
+          published_at: '2026-10-26T10:00:00Z',
+        };
+        publications.push(publication);
+        return route.fulfill({ json: publication });
+      }
       if (rest === '/status') {
         apartment.status = (request.postDataJSON() as { status: string }).status;
         return route.fulfill({ json: detail(apartment) });
@@ -134,7 +172,9 @@ test('an administrator creates, illustrates and publishes a listing', async ({ p
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.getByRole('link', { name: 'Add apartment' }).click();
 
-  await page.getByLabel('Title').fill('E2E beach flat');
+  // The form route is lazy-loaded: wait for it (the dashboard also has a "Search by title").
+  await expect(page.getByRole('heading', { name: 'New apartment' })).toBeVisible();
+  await page.getByLabel('Title', { exact: true }).fill('E2E beach flat');
   await page.getByLabel('Monthly rent, ₫').fill('12000000');
   await page.getByLabel('District').selectOption({ label: 'Sơn Trà' });
   await page.getByLabel('Bedrooms').selectOption('1');
@@ -161,4 +201,13 @@ test('an administrator creates, illustrates and publishes a listing', async ({ p
   await page.getByRole('button', { name: 'Make available' }).click();
   await expect(page.getByText('Status changed to “Available”')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Status' }).getByText('Available')).toBeVisible();
+
+  // Channel post: preview first, then an explicit confirmation.
+  await page.getByRole('button', { name: 'Publish to Telegram channel' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Post preview' });
+  await expect(sheet.getByRole('article').getByText('E2E beach flat')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Publish', exact: true }).click();
+  await expect(sheet.getByText('Posted to the channel')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByText(/Posted .* by Boss/)).toBeVisible();
 });

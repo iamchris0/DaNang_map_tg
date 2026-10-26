@@ -14,6 +14,11 @@ const KNOWN_CODES = [
   'rate_limited',
   'validation_error',
   'listing_not_found',
+  'already_published',
+  'listing_not_available',
+  'telegram_not_configured',
+  'idempotency_key_reused',
+  'publication_not_unconfirmed',
 ] as const;
 type KnownCode = (typeof KNOWN_CODES)[number];
 

@@ -271,7 +271,67 @@
       "rate_limited": "Too many requests. Please wait a moment.",
       "validation_error": "Some fields are invalid.",
       "listing_not_found": "This listing no longer exists.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "already_published": "This listing has already been posted to the channel.",
+      "listing_not_available": "Only available listings can be posted to the channel.",
+      "telegram_not_configured": "Channel posting is not configured on the server.",
+      "idempotency_key_reused": "Please reopen the preview and try again.",
+      "publication_not_unconfirmed": "This attempt has already been resolved."
+    },
+    "telegram": {
+      "title": "Telegram channel",
+      "publish": "Publish to Telegram channel",
+      "notPosted": "Not posted to the channel yet.",
+      "posted": "Posted {{date}}",
+      "postedBy": "Posted {{date}} by {{name}}",
+      "openPost": "Open post",
+      "editNotice": "Editing this listing does not change the post that is already in the channel.",
+      "makeAvailableFirst": "Make the listing available before posting it.",
+      "previewTitle": "Post preview",
+      "channel": "Channel: {{channel}}",
+      "length": "{{length}} / {{limit}} characters",
+      "photos_one": "{{count}} photo",
+      "photos_other": "{{count}} photos",
+      "confirm": "Publish",
+      "publishing": "Publishing…",
+      "cancel": "Cancel",
+      "done": "Done",
+      "successTitle": "Posted to the channel",
+      "failedTitle": "Not posted",
+      "tryAgain": "Try again",
+      "retrySame": "Retry",
+      "connectionLost": "The connection was lost before the result arrived. Retrying is safe: it cannot create a second post.",
+      "unknownTitle": "We could not confirm the post",
+      "unknownBody": "Telegram did not answer in time, so the post may or may not have appeared. Check the channel, then tell us what you see. Nothing will be re-sent automatically.",
+      "wasPosted": "It was posted",
+      "wasNotPosted": "It was not posted",
+      "history": "Publication history",
+      "noHistory": "No attempts yet.",
+      "status": {
+        "pending": "In progress",
+        "succeeded": "Posted",
+        "failed": "Failed",
+        "unknown": "Unconfirmed"
+      },
+      "blockers": {
+        "telegram_not_configured": "Channel posting is not configured on the server (TELEGRAM_BOT_TOKEN, TELEGRAM_CHANNEL_ID).",
+        "listing_not_available": "Only available listings can be posted.",
+        "already_published": "This listing has already been posted to the channel."
+      },
+      "errors": {
+        "bot_not_admin": "The bot is not an administrator of the channel. Add it as an admin with “Post messages”.",
+        "missing_permission": "The bot is not allowed to post in the channel. Enable “Post messages” for it.",
+        "chat_not_found": "Channel not found. Check TELEGRAM_CHANNEL_ID.",
+        "media_rejected": "Telegram rejected the photos.",
+        "media_unavailable": "The photos could not be read from storage. Nothing was posted.",
+        "caption_too_long": "The post text is too long for Telegram.",
+        "rate_limited": "Telegram asked us to slow down. Try again in a minute.",
+        "telegram_unavailable": "Telegram could not be reached. Nothing was posted.",
+        "bot_token_invalid": "The bot token is invalid. Check TELEGRAM_BOT_TOKEN.",
+        "telegram_rejected": "Telegram rejected the post.",
+        "unconfirmed": "The result could not be confirmed.",
+        "not_published": "Marked as not posted by an administrator."
+      }
     }
   },
   "validation": {

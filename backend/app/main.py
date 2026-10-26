@@ -13,6 +13,7 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.storage import ensure_bucket
 from app.db.session import get_engine
+from app.services.telegram_publisher import close_publishers
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     if settings.s3_auto_create_bucket:
         await _ensure_bucket_with_retry()
     yield
+    await close_publishers()
     await get_engine().dispose()
 
 

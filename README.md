@@ -3,11 +3,12 @@
 A Telegram Mini App for browsing and managing long-term rental apartments in Da Nang:
 a map-based catalog for users and a mobile-friendly admin panel for channel administrators.
 
-> **Status: Phase 4 (Admin panel) of 6.** Users browse listings on a map or list, filter,
-> open details, contact the agent or administrator and share deep links (EN/RU, Telegram or
-> browser). Administrators manage the catalog from their phone: dashboard, create/edit
-> forms, address search and map pin, photo upload and ordering, status changes. Next:
-> Telegram channel publishing (Phase 5), then production deployment (Phase 6). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+> **Status: Phase 5 (Telegram channel publishing) of 6.** Users browse listings on a map or
+> list, filter, open details, contact the agent or administrator and share deep links
+> (EN/RU, Telegram or browser). Administrators manage the catalog from their phone and
+> explicitly publish listings to the Telegram channel (preview → confirm), with
+> duplicate-safe retries and publication history. The bot's `/start` opens the Mini App.
+> Next: production deployment, demo data and the acceptance checklist (Phase 6). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ## Branches
 
@@ -123,6 +124,10 @@ Interactive docs: http://localhost:8000/api/docs. All errors use one envelope:
 | `PATCH /api/admin/apartments/{id}/images/order` | admin | New order (`image_ids`); first = cover |
 | `DELETE /api/admin/apartments/{id}/images/{image_id}` | admin | Remove a photo |
 | `GET /api/admin/geocode?q=&lang=` | admin | Address/landmark search inside the service area |
+| `GET /api/admin/apartments/{id}/telegram-preview` | admin | Exact post + photos + blockers (never posts) |
+| `POST /api/admin/apartments/{id}/publish-telegram` | admin | Post to the channel; requires `Idempotency-Key` header |
+| `GET /api/admin/apartments/{id}/telegram-publications` | admin | Attempt history |
+| `POST /api/admin/apartments/{id}/telegram-publications/{pid}/resolve` | admin | Record the outcome of an unconfirmed attempt |
 
 Catalog filters: `min_price`, `max_price` (VND), repeated `bedrooms` (`0` = studio,
 `3` = 3+), repeated `district` (ids), `min_area`, `max_area` (m²), and
@@ -135,7 +140,6 @@ curl -s -X POST localhost:8000/api/auth/dev -H 'Content-Type: application/json' 
   -d '{"telegram_user_id": 1001}'
 ```
 
-Telegram channel publishing endpoints arrive in Phase 5.
 
 ## Frontend (Phase 3)
 
@@ -205,6 +209,47 @@ bucket (or a CDN in front of it) must allow public **read** of objects, and
 `S3_PUBLIC_BASE_URL` must point at that public URL. Development does this automatically
 (`S3_AUTO_CREATE_BUCKET=true` creates the bucket with a public-read policy). Allow request
 bodies of at least 11 MB on the reverse proxy for uploads.
+
+## Telegram channel publishing (Phase 5)
+
+Publishing to the catalog and posting to the channel are separate. A post is only ever
+sent when an administrator presses **Publish to Telegram channel** on an *available*
+listing, reviews the preview and confirms.
+
+- **The post:** title, rent, district, area, bedrooms, bathrooms, description, deposit,
+  minimum rental and a link that opens the listing in the Mini App, in
+  `TELEGRAM_POST_LANGUAGE` (en/ru). Up to 10 photos are sent as an album (first photo
+  carries the caption). The description is shortened with "…" to fit Telegram's
+  1024-character caption limit; user text is HTML-escaped.
+- **No duplicates:** each confirmation carries an `Idempotency-Key`. Retrying the same
+  request (double click, lost connection) returns the original result. The database allows
+  only one pending/posted/unconfirmed post per listing and channel; a second publish
+  shows the existing post instead. Reposting is not part of the MVP.
+- **Failures:** Telegram's definite rejections (bot not an admin, missing permission,
+  channel not found, photos rejected, rate limit…) are stored as *failed* with a readable
+  reason, and a new attempt is allowed. If the outcome cannot be confirmed (timeout,
+  Telegram 5xx, a crash mid-request), the attempt is stored as *unconfirmed* and is **never
+  retried automatically**: the admin checks the channel and taps *It was posted* or *It was
+  not posted*.
+- **History:** every attempt (who, when, result) is listed on the listing's edit page.
+- Editing a listing never changes an existing channel post; the panel says so.
+
+### Bot and channel setup
+
+1. `@BotFather` → `/newbot`; put the token in `TELEGRAM_BOT_TOKEN` and the username
+   (without `@`) in `TELEGRAM_BOT_USERNAME`.
+2. Add the bot to your channel as an **administrator** with **Post messages**.
+3. Set `TELEGRAM_CHANNEL_ID`: `@channelusername` for a public channel, or the numeric id
+   (`-100…`) for a private one.
+4. `@BotFather` → `/newapp` for the Mini App (HTTPS URL of the frontend); put its short
+   name in `TELEGRAM_MINI_APP_SHORT_NAME` so posts link to
+   `https://t.me/<bot>/<app>?startapp=<listing>`.
+5. Run the bot process (answers `/start` with an "Open apartments" button and sets the
+   chat menu button; needs an HTTPS `PUBLIC_APP_URL`):
+
+   ```bash
+   docker compose --profile bot up -d bot
+   ```
 
 ## Running without Docker
 

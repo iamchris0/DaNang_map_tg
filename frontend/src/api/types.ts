@@ -176,3 +176,31 @@ export interface GeocodeResult {
   longitude: number;
   kind: string | null;
 }
+
+export interface Publication {
+  id: string;
+  status: PublicationStatus;
+  telegram_channel_id: string;
+  telegram_message_id: number | null;
+  post_url: string | null;
+  error_code: string | null;
+  error_message: string | null;
+  published_by: string | null;
+  created_at: string;
+  published_at: string | null;
+}
+
+export type PublishBlocker =
+  'telegram_not_configured' | 'listing_not_available' | 'already_published';
+
+export interface TelegramPreview {
+  caption_html: string | null;
+  caption_length: number;
+  caption_limit: number;
+  photo_urls: string[];
+  channel_id: string;
+  language: string;
+  can_publish: boolean;
+  blockers: PublishBlocker[];
+  live_publication: Publication | null;
+}

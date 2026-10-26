@@ -17,6 +17,8 @@ import type {
   GeocodeResult,
   Image,
   Page,
+  Publication,
+  TelegramPreview,
 } from './types';
 
 const ADMIN_KEY = ['admin'] as const;
@@ -178,5 +180,74 @@ export function useGeocode(query: string, language: string) {
     enabled: query.trim().length >= 3,
     staleTime: Infinity,
     retry: false,
+  });
+}
+
+// --- Telegram channel publishing -------------------------------------------------------------
+
+function telegramKey(apartmentId: string) {
+  return [...ADMIN_KEY, 'telegram', apartmentId] as const;
+}
+
+export function useTelegramPublications(apartmentId: string) {
+  return useQuery({
+    queryKey: [...telegramKey(apartmentId), 'history'],
+    queryFn: () =>
+      apiFetch<Publication[]>(`/api/admin/apartments/${apartmentId}/telegram-publications`),
+  });
+}
+
+export function useTelegramPreview(apartmentId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...telegramKey(apartmentId), 'preview'],
+    queryFn: () =>
+      apiFetch<TelegramPreview>(`/api/admin/apartments/${apartmentId}/telegram-preview`),
+    enabled,
+    staleTime: 0,
+  });
+}
+
+/** A fresh key per confirmed attempt; reuse it to retry the same attempt safely. */
+export function newIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
+export function usePublishToTelegram(apartmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (idempotencyKey: string) =>
+      apiFetch<Publication>(`/api/admin/apartments/${apartmentId}/publish-telegram`, {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+      }),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: telegramKey(apartmentId) });
+      void queryClient.invalidateQueries({ queryKey: [...ADMIN_KEY, 'list'] });
+      void queryClient.invalidateQueries({ queryKey: adminApartmentKey(apartmentId) });
+    },
+  });
+}
+
+export function useResolvePublication(apartmentId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      publicationId,
+      wasPublished,
+    }: {
+      publicationId: string;
+      wasPublished: boolean;
+    }) =>
+      apiFetch<Publication>(
+        `/api/admin/apartments/${apartmentId}/telegram-publications/${publicationId}/resolve`,
+        { method: 'POST', json: { was_published: wasPublished } },
+      ),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: telegramKey(apartmentId) });
+      void queryClient.invalidateQueries({ queryKey: [...ADMIN_KEY, 'list'] });
+    },
   });
 }

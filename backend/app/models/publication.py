@@ -27,6 +27,8 @@ class TelegramPublication(Base):
     )
     # Client-supplied key; repeated submissions with the same key return the same record.
     idempotency_key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+    # Stable machine-readable failure reason (e.g. "bot_not_admin"); see services/telegram.
+    error_code: Mapped[str | None] = mapped_column(String(64))
     error_message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
