@@ -1,0 +1,12 @@
+# Production image: static build served by Caddy (see deploy/Caddyfile).
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+ARG VITE_MAP_STYLE_URL=""
+ENV VITE_MAP_STYLE_URL=$VITE_MAP_STYLE_URL
+RUN npx vite build
+
+FROM caddy:2.10.2-alpine
+COPY --from=build /app/dist /srv

@@ -214,3 +214,30 @@ separate long-polling process (`python -m app.bot`, Compose service `bot`) handl
 conversations: `/start` (optionally with a listing id) replies with a Mini App button,
 and the chat menu button opens the Mini App. Mini App buttons require an HTTPS
 `PUBLIC_APP_URL`, which arrives with the Phase 6 deployment.
+
+## D29. Production topology
+
+One VPS, one Compose file: Caddy (automatic HTTPS, static Mini App, `/api` and `/media`
+reverse proxy), FastAPI, the bot process, PostgreSQL/PostGIS and RustFS. Photos are served
+same-origin under `/media` (Caddy → storage; the bucket allows public object reads), which
+also works through a tunnel and avoids CORS. Hosted S3 + CDN is a configuration change
+(`S3_ENDPOINT_URL`, `S3_PUBLIC_BASE_URL`). Bucket creation and demo data are explicit CLI
+steps (`python -m app.cli init-storage | seed-demo`), never automatic in production.
+
+## D30. Webview diagnostics and tunnel safety
+
+Telegram's webview has no visible console, so an inline script in `index.html` reports
+errors, failed resource loads and "app did not start within 15 s" to
+`POST /api/client-errors` (rate-limited, size-capped, logged as warnings). The developer
+sign-in is refused whenever a proxy/tunnel header is present (`Cf-Connecting-Ip`,
+`X-Forwarded-For`, `Forwarded`, `X-Real-IP`), so exposing a dev stack can't hand out admin
+sessions.
+
+## D31. Visual design
+
+The UI follows a familiar rental-marketplace pattern: a search pill summarising filters,
+a quick-filter chip row, large rounded photo cards, white price pills on the map (dark when
+selected), and on desktop a list that follows the visible map area next to a sticky map.
+Surfaces and text use Telegram's theme colours (light/dark), the brand colour (#FF385C) is
+constant. Admin forms share the same tokens: full-width controls of equal height, paired
+fields aligned on their inputs, equal-width option and action buttons.

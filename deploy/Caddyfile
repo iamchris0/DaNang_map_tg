@@ -1,0 +1,39 @@
+# Single entry point: HTTPS (automatic certificates when SITE_ADDRESS is a domain),
+# the built Mini App, the API and listing photos.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Photo uploads are capped at 10 MB by the API; leave headroom for multipart overhead.
+	request_body {
+		max_size 12MB
+	}
+
+	handle /api/* {
+		reverse_proxy backend:8000
+	}
+
+	# Listing photos from the S3-compatible store (public-read bucket, see `app.cli init-storage`).
+	handle_path /media/* {
+		rewrite * /{$S3_BUCKET}{uri}
+		reverse_proxy storage:9000 {
+			header_up Host storage:9000
+		}
+	}
+
+	handle {
+		root * /srv
+		# Hashed build assets never change; the HTML entry point must always revalidate.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@html path / /index.html
+		header @html Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}

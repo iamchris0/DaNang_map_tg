@@ -3,12 +3,11 @@
 A Telegram Mini App for browsing and managing long-term rental apartments in Da Nang:
 a map-based catalog for users and a mobile-friendly admin panel for channel administrators.
 
-> **Status: Phase 5 (Telegram channel publishing) of 6.** Users browse listings on a map or
-> list, filter, open details, contact the agent or administrator and share deep links
-> (EN/RU, Telegram or browser). Administrators manage the catalog from their phone and
-> explicitly publish listings to the Telegram channel (preview → confirm), with
-> duplicate-safe retries and publication history. The bot's `/start` opens the Mini App.
-> Next: production deployment, demo data and the acceptance checklist (Phase 6). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+> **Status: MVP complete (Phases 1–6).** Map- and list-based catalog with filters, details,
+> contacts and deep links (EN/RU, Telegram or browser); a phone-friendly admin panel with
+> photo upload and location picking; duplicate-safe publishing to the Telegram channel; a
+> production stack with automatic HTTPS. Deploy: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+> Acceptance status: [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).
 
 ## Branches
 
@@ -71,6 +70,16 @@ default) and, in development, creates the S3 bucket if it is missing.
 
 Data lives in named volumes (`db-data`, `storage-data`) and survives restarts.
 `docker compose down -v` wipes it.
+
+## Demo data
+
+18 clearly labelled fictional listings (`[DEMO]` titles, "DEMO PHOTO" placeholder images)
+spread across Da Nang's districts:
+
+```bash
+docker compose exec backend python -m app.cli seed-demo            # add once
+docker compose exec backend python -m app.cli seed-demo --reset    # replace
+```
 
 ## Database & migrations
 
@@ -172,13 +181,11 @@ frontend/src/
 
 ### Testing inside Telegram
 
-1. Create a bot with @BotFather and a Mini App (`/newapp`). Put the short name in
-   `TELEGRAM_MINI_APP_SHORT_NAME`, and the bot token and username in `.env`.
-2. Expose the dev server over HTTPS, e.g. `cloudflared tunnel --url http://localhost:5173`,
-   and add the tunnel host to `VITE_ALLOWED_HOSTS`.
-3. Set the Mini App URL in @BotFather to the tunnel URL and open it from the bot.
-
-Phase 6 adds the production HTTPS setup.
+Use the production build behind an HTTPS tunnel (it loads far faster in Telegram's webview
+than the development server); see *Testing inside Telegram before you have a server* in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). The developer sign-in is always refused for
+requests that come through a proxy or tunnel, and JavaScript errors from the webview are
+logged by the backend as `Client error: …`.
 
 ## Admin panel (Phase 4)
 

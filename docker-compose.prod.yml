@@ -1,0 +1,101 @@
+# Production stack for a single VPS. See docs/DEPLOYMENT.md.
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+name: danang-apartments-prod
+
+x-backend: &backend
+  build:
+    context: ./backend
+  env_file:
+    - path: ${ENV_FILE:-.env.production}
+      required: false
+  environment: &backend-env
+    ENVIRONMENT: production
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-danang}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-danang}
+    S3_ENDPOINT_URL: http://storage:9000
+    S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-/media}
+    S3_AUTO_CREATE_BUCKET: "false"
+    DEV_AUTH_ENABLED: "false"
+    # Caddy is the only client; trust its X-Forwarded-For for real client IPs (rate limits).
+    FORWARDED_ALLOW_IPS: "*"
+  restart: unless-stopped
+
+services:
+  db:
+    image: imresamu/postgis:17-3.5-bookworm
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-danang}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-danang}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  storage:
+    image: rustfs/rustfs:1.0.1
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:?set S3_ACCESS_KEY_ID}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY}
+    volumes:
+      - storage-data:/data
+    restart: unless-stopped
+
+  backend:
+    <<: *backend
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  bot:
+    <<: *backend
+    environment:
+      <<: *backend-env
+      RUN_MIGRATIONS: "false"
+    command: ["python", "-m", "app.bot"]
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-}
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS (your domain, or :80 behind a tunnel)}
+      S3_BUCKET: ${S3_BUCKET:-danang-apartments}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db-data:
+  storage-data:
+  caddy-data:
+  caddy-config:
