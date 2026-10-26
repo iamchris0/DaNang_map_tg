@@ -44,15 +44,16 @@ test('filters apply to both map and list views', async ({ page, isMobile }) => {
   const map = page.getByRole('region', { name: 'Map of apartments in Da Nang' });
   await expectAreaCount(page, isMobile, 3);
 
-  await page.getByRole('button', { name: 'Filters', exact: true }).click();
-  const sheet = page.getByRole('dialog', { name: 'Filters' });
-  await sheet.getByRole('button', { name: '2', exact: true }).click();
-  await sheet.getByRole('button', { name: 'Show 1 apartment' }).click();
+  // Popover on desktop, bottom sheet on phones: both are dialogs named after the category.
+  await page.getByRole('button', { name: 'Bedrooms', exact: true }).click();
+  const panel = page.getByRole('dialog', { name: 'Bedrooms' });
+  await panel.getByRole('button', { name: '2', exact: true }).click();
+  await panel.getByRole('button', { name: 'Show 1 apartment' }).click();
 
   await expect(page).toHaveURL('/?bedrooms=2');
   await expect(map.getByRole('button', { name: /M ₫/ })).toHaveCount(1);
-  // Quick-filter chip reflects the same state.
-  await expect(page.getByRole('button', { name: '2 bedrooms', pressed: true })).toBeVisible();
+  // The trigger now shows the selection.
+  await expect(page.getByRole('button', { name: '2', exact: true })).toBeVisible();
 
   // Phones switch to the list; desktop shows it next to the map.
   if (isMobile) await page.getByRole('button', { name: 'List', exact: true }).click();
@@ -61,7 +62,7 @@ test('filters apply to both map and list views', async ({ page, isMobile }) => {
 
   // Filters survive a reload because they live in the URL.
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Filters, 1 active' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Clear all' })).toBeVisible();
 });
 
 test('deep links open the listing and unknown ids are handled', async ({ page }) => {
@@ -77,9 +78,9 @@ test('deep links open the listing and unknown ids are handled', async ({ page })
 
 test('switching language translates the interface', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Filters', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Price' })).toBeVisible();
   await page.getByRole('button', { name: 'Русский' }).click();
-  await expect(page.getByRole('button', { name: 'Фильтры', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Цена' })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Студия' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Спальни' })).toBeVisible();
 });

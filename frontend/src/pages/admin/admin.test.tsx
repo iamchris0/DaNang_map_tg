@@ -53,11 +53,9 @@ describe('dashboard', () => {
     const user = userEvent.setup();
     renderApp('/admin');
 
-    const stats = await screen.findByRole('region', { name: 'Admin' });
-    await waitFor(() => {
-      expect(within(stats).getByRole('button', { name: /^3\s*Total/ })).toBeInTheDocument();
-    });
-    expect(within(stats).getByRole('button', { name: /^1\s*Draft/ })).toBeInTheDocument();
+    // One row of status filters with counts (no separate statistics block).
+    expect(await screen.findByRole('button', { name: 'All 3' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Draft 1' })).toBeInTheDocument();
     expect(await screen.findByText('Sea view 1BR')).toBeInTheDocument();
     expect(screen.getAllByText('12,000,000 ₫')).toHaveLength(2);
 
@@ -68,7 +66,7 @@ describe('dashboard', () => {
     expect(screen.getByText('Draft loft')).toBeInTheDocument();
 
     await user.clear(screen.getByRole('searchbox'));
-    await user.click(screen.getByRole('button', { name: 'Rented', pressed: false }));
+    await user.click(screen.getByRole('button', { name: 'Rented 1', pressed: false }));
     await waitFor(() => {
       expect(screen.queryByText('Draft loft')).not.toBeInTheDocument();
     });
@@ -88,7 +86,23 @@ describe('dashboard', () => {
 
     expect(await screen.findByText('Status changed to “Rented”')).toBeInTheDocument();
     expect([...api.store.values()][0]?.status).toBe('rented');
-    expect(await screen.findByRole('button', { name: 'Make available' })).toBeInTheDocument();
+    // A rented listing can be published again; it's the only text action on the tile.
+    expect(await screen.findByRole('button', { name: 'Publish' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark as rented' })).not.toBeInTheDocument();
+  });
+
+  it('deletes a listing from its tile after confirmation', async () => {
+    const api = installFakeAdminApi([{ ...blankInput(), title: 'Old draft' }]);
+    const user = userEvent.setup();
+    renderApp('/admin');
+    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: 'Delete this listing?' })).getByRole('button', {
+        name: 'Delete',
+      }),
+    );
+    expect(await screen.findByText('Listing deleted')).toBeInTheDocument();
+    expect(api.store.size).toBe(0);
   });
 });
 

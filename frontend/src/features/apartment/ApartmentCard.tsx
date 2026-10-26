@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 
 import type { ApartmentCard as ApartmentCardData } from '@/api/types';
+import { AreaIcon, BathIcon } from '@/components/ui/icons';
 import { districtName, formatArea, formatPriceFull } from '@/lib/format';
 
 import { ApartmentPhoto } from './ApartmentPhoto';
@@ -43,12 +44,6 @@ export function ApartmentSummary({
   className?: string;
 }) {
   const { t } = useTranslation();
-  const details = [
-    apartment.area_sqm !== null ? formatArea(apartment.area_sqm, language) : null,
-    apartment.bathrooms !== null
-      ? t('apartment.bathroomsShort', { count: apartment.bathrooms })
-      : null,
-  ].filter(Boolean);
 
   return (
     <div className={`space-y-0.5 text-[15px] leading-snug ${className}`}>
@@ -56,7 +51,22 @@ export function ApartmentSummary({
         {roomsLabel(t, apartment.bedrooms)} · {districtName(apartment.district, language)}
       </p>
       <h3 className="text-hint truncate">{apartment.title}</h3>
-      {details.length > 0 && <p className="text-hint">{details.join(' · ')}</p>}
+      {(apartment.area_sqm !== null || apartment.bathrooms !== null) && (
+        <p className="text-hint flex flex-wrap items-center gap-x-3">
+          {apartment.area_sqm !== null && (
+            <span className="flex items-center gap-1">
+              <AreaIcon width={15} height={15} aria-hidden="true" />
+              {formatArea(apartment.area_sqm, language)}
+            </span>
+          )}
+          {apartment.bathrooms !== null && (
+            <span className="flex items-center gap-1">
+              <BathIcon width={15} height={15} aria-hidden="true" />
+              {t('apartment.bathroomsShort', { count: apartment.bathrooms })}
+            </span>
+          )}
+        </p>
+      )}
       <p className="pt-1">
         <span className="font-semibold">{formatPriceFull(apartment.price_vnd, language)}</span>{' '}
         <span className="text-fg">{t('apartment.perMonth')}</span>

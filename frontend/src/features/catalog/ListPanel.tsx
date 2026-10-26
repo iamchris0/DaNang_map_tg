@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { type CatalogSort, useApartmentList } from '@/api/catalog';
 import { Spinner } from '@/components/ui/Spinner';
+import { SortDropdown } from './SortDropdown';
 import { ApartmentCard } from '@/features/apartment/ApartmentCard';
 import type { CatalogFilters } from '@/features/filters/filters';
 import type { BBox } from '@/lib/geo';
@@ -15,8 +16,6 @@ interface Props {
   onSortChange: (sort: CatalogSort) => void;
   onReset: () => void;
 }
-
-const SORTS: CatalogSort[] = ['newest', 'price_asc', 'price_desc'];
 
 export function ListPanel({ filters, bbox = null, sort, onSortChange, onReset }: Props) {
   const { t } = useTranslation();
@@ -48,7 +47,7 @@ export function ListPanel({ filters, bbox = null, sort, onSortChange, onReset }:
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-6xl px-4 pt-5 pb-[calc(6rem+var(--safe-bottom))] lg:px-10 lg:pb-10">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-6 flex items-center justify-between gap-3">
           <div>
             <p role="status" className="text-lg font-semibold lg:text-xl">
               {total !== undefined &&
@@ -58,22 +57,7 @@ export function ListPanel({ filters, bbox = null, sort, onSortChange, onReset }:
             </p>
             <p className="text-hint text-sm">{t('catalog.pricesNote')}</p>
           </div>
-          <label className="flex items-center gap-2 text-sm">
-            <span className="sr-only">{t('catalog.sort.label')}</span>
-            <select
-              value={sort}
-              onChange={(event) => {
-                onSortChange(event.target.value as CatalogSort);
-              }}
-              className="border-line bg-bg min-h-10 rounded-full border px-4 font-semibold"
-            >
-              {SORTS.map((option) => (
-                <option key={option} value={option}>
-                  {t(`catalog.sort.${option}`)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SortDropdown sort={sort} onChange={onSortChange} />
         </div>
 
         {query.isPending ? (

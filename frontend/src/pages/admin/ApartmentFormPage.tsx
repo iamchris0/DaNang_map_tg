@@ -40,7 +40,7 @@ function StatusPanel({ apartment }: { apartment: AdminApartment }) {
   const { t } = useTranslation();
   return (
     <section
-      className="bg-surface space-y-3 rounded-2xl p-4"
+      className="border-line bg-bg space-y-4 rounded-2xl border p-4 lg:p-6"
       aria-label={t('admin.form.statusLabel')}
     >
       <div className="flex items-center gap-2">
@@ -208,169 +208,187 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
     <form
       noValidate
       onSubmit={(event) => void onSubmit(event)}
-      className="mx-auto max-w-3xl space-y-4 px-4 pt-5 pb-[calc(6rem+var(--safe-bottom))] lg:px-6"
+      className="mx-auto max-w-7xl space-y-4 px-4 pt-5 pb-[calc(6rem+var(--safe-bottom))] lg:px-10"
     >
       <h2 className="text-2xl font-semibold">
         {isNew ? t('admin.form.newTitle') : t('admin.form.editTitle')}
       </h2>
 
-      {apartment.data && <StatusPanel apartment={apartment.data} />}
       {apartment.data && (
-        <TelegramPanel apartmentId={apartment.data.id} status={apartment.data.status} />
+        <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+          <StatusPanel apartment={apartment.data} />
+          <TelegramPanel apartmentId={apartment.data.id} status={apartment.data.status} />
+        </div>
       )}
 
-      <FormSection title={t('admin.form.sections.basics')}>
-        <TextField
-          label={t('admin.form.title')}
-          placeholder={t('admin.form.titlePlaceholder')}
-          error={errors.title}
-          {...register('title')}
-        />
-        <TextField
-          label={t('admin.form.price')}
-          inputMode="numeric"
-          autoComplete="off"
-          error={errors.price}
-          hint={price && /^\d+$/.test(price) ? formatPriceFull(Number(price), language) : undefined}
-          {...register('price', {
-            setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
-          })}
-        />
-        <SelectField
-          label={t('admin.form.district')}
-          error={errors.district_id}
-          options={[
-            { value: '', label: t('admin.form.choose') },
-            ...(districts.data ?? []).map((d) => ({
-              value: String(d.id),
-              label: districtName(d, language),
-            })),
-          ]}
-          {...register('district_id')}
-        />
-        <div className="grid grid-cols-2 items-end gap-3">
-          <SelectField
-            label={t('admin.form.bedrooms')}
-            error={errors.bedrooms}
-            options={roomOptions(true)}
-            {...register('bedrooms')}
+      {/* Desktop: two columns of tiles; phones: one column in reading order. */}
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="space-y-4">
+          <FormSection title={t('admin.form.sections.basics')}>
+            <TextField
+              label={t('admin.form.title')}
+              placeholder={t('admin.form.titlePlaceholder')}
+              error={errors.title}
+              {...register('title')}
+            />
+            <TextField
+              label={t('admin.form.price')}
+              inputMode="numeric"
+              autoComplete="off"
+              error={errors.price}
+              hint={
+                price && /^\d+$/.test(price) ? formatPriceFull(Number(price), language) : undefined
+              }
+              {...register('price', {
+                setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
+              })}
+            />
+            <SelectField
+              label={t('admin.form.district')}
+              error={errors.district_id}
+              options={[
+                { value: '', label: t('admin.form.choose') },
+                ...(districts.data ?? []).map((d) => ({
+                  value: String(d.id),
+                  label: districtName(d, language),
+                })),
+              ]}
+              {...register('district_id')}
+            />
+            <div className="grid grid-cols-2 items-end gap-3">
+              <SelectField
+                label={t('admin.form.bedrooms')}
+                error={errors.bedrooms}
+                options={roomOptions(true)}
+                {...register('bedrooms')}
+              />
+              <SelectField
+                label={t('admin.form.bathrooms')}
+                error={errors.bathrooms}
+                options={roomOptions(false)}
+                {...register('bathrooms')}
+              />
+            </div>
+            <TextField
+              label={t('admin.form.area')}
+              inputMode="decimal"
+              error={errors.area}
+              {...register('area')}
+            />
+          </FormSection>
+
+          <LocationSection
+            control={control}
+            register={register}
+            address={
+              <TextField
+                label={t('admin.form.address')}
+                error={errors.address}
+                {...register('address')}
+              />
+            }
+            locationError={errorText(errors.location?.message)}
+            precisionError={errorText(errors.location_precision?.message)}
+            onPickResult={(result) => {
+              setValue(
+                'location',
+                { latitude: result.latitude, longitude: result.longitude },
+                { shouldDirty: true },
+              );
+              // A searched place (often a street or district) is never claimed to be exact.
+              setValue('location_precision', 'approximate', { shouldDirty: true });
+            }}
           />
-          <SelectField
-            label={t('admin.form.bathrooms')}
-            error={errors.bathrooms}
-            options={roomOptions(false)}
-            {...register('bathrooms')}
-          />
+
+          <FormSection title={t('admin.form.sections.photos')}>
+            {apartment.data ? (
+              <PhotoManager apartmentId={apartment.data.id} images={apartment.data.images} />
+            ) : (
+              <StagedPhotoManager photos={staged} onChange={setStaged} progress={uploadProgress} />
+            )}
+          </FormSection>
         </div>
-        <TextField
-          label={t('admin.form.area')}
-          inputMode="decimal"
-          error={errors.area}
-          {...register('area')}
-        />
-      </FormSection>
+        <div className="space-y-4">
+          <FormSection title={t('admin.form.sections.terms')}>
+            <div className="grid grid-cols-2 items-end gap-3">
+              <TextField
+                label={t('admin.form.deposit')}
+                inputMode="numeric"
+                error={errors.deposit}
+                {...register('deposit', {
+                  setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
+                })}
+              />
+              <TextField
+                label={t('admin.form.minMonths')}
+                inputMode="numeric"
+                error={errors.minimum_rental_months}
+                {...register('minimum_rental_months')}
+              />
+            </div>
+            <TextAreaField
+              label={t('admin.form.conditions')}
+              error={errors.rental_conditions}
+              {...register('rental_conditions')}
+            />
+          </FormSection>
 
-      <LocationSection
-        control={control}
-        register={register}
-        locationError={errorText(errors.location?.message)}
-        precisionError={errorText(errors.location_precision?.message)}
-        onPickResult={(result) => {
-          setValue(
-            'location',
-            { latitude: result.latitude, longitude: result.longitude },
-            { shouldDirty: true },
-          );
-          // A searched place (often a street or district) is never claimed to be exact.
-          setValue('location_precision', 'approximate', { shouldDirty: true });
-        }}
-      />
-      <TextField label={t('admin.form.address')} error={errors.address} {...register('address')} />
+          <FormSection title={t('admin.form.sections.details')}>
+            <TextAreaField
+              label={t('admin.form.description')}
+              rows={6}
+              error={errors.description}
+              {...register('description')}
+            />
+          </FormSection>
 
-      <FormSection title={t('admin.form.sections.photos')}>
-        {apartment.data ? (
-          <PhotoManager apartmentId={apartment.data.id} images={apartment.data.images} />
-        ) : (
-          <StagedPhotoManager photos={staged} onChange={setStaged} progress={uploadProgress} />
-        )}
-      </FormSection>
+          <FormSection title={t('admin.form.sections.contact')}>
+            <SelectField
+              label={t('admin.form.contactType')}
+              error={errors.agent_contact_type}
+              options={[
+                { value: '', label: t('admin.form.contactNone') },
+                ...(['telegram_username', 'telegram_link', 'phone'] as const).map((type) => ({
+                  value: type,
+                  label: t(`admin.form.contactTypes.${type}`),
+                })),
+              ]}
+              {...register('agent_contact_type')}
+            />
+            {contactType && (
+              <TextField
+                label={t('admin.form.contactValue')}
+                placeholder={t(`admin.form.contactPlaceholders.${contactType}`)}
+                autoCapitalize="off"
+                autoCorrect="off"
+                error={errors.agent_contact_value}
+                {...register('agent_contact_value')}
+              />
+            )}
+            <p className="text-hint text-sm">{t('admin.form.adminContactNote')}</p>
+          </FormSection>
 
-      <FormSection title={t('admin.form.sections.terms')}>
-        <div className="grid grid-cols-2 items-end gap-3">
-          <TextField
-            label={t('admin.form.deposit')}
-            inputMode="numeric"
-            error={errors.deposit}
-            {...register('deposit', { setValueAs: (value: string) => value.replace(/[^\d]/g, '') })}
-          />
-          <TextField
-            label={t('admin.form.minMonths')}
-            inputMode="numeric"
-            error={errors.minimum_rental_months}
-            {...register('minimum_rental_months')}
-          />
+          {apartment.data && (
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmDelete(true);
+              }}
+              className="text-danger flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-semibold"
+            >
+              <TrashIcon />
+              {t('admin.form.delete')}
+            </button>
+          )}
         </div>
-        <TextAreaField
-          label={t('admin.form.conditions')}
-          error={errors.rental_conditions}
-          {...register('rental_conditions')}
-        />
-      </FormSection>
-
-      <FormSection title={t('admin.form.sections.details')}>
-        <TextAreaField
-          label={t('admin.form.description')}
-          rows={6}
-          error={errors.description}
-          {...register('description')}
-        />
-      </FormSection>
-
-      <FormSection title={t('admin.form.sections.contact')}>
-        <SelectField
-          label={t('admin.form.contactType')}
-          error={errors.agent_contact_type}
-          options={[
-            { value: '', label: t('admin.form.contactNone') },
-            ...(['telegram_username', 'telegram_link', 'phone'] as const).map((type) => ({
-              value: type,
-              label: t(`admin.form.contactTypes.${type}`),
-            })),
-          ]}
-          {...register('agent_contact_type')}
-        />
-        {contactType && (
-          <TextField
-            label={t('admin.form.contactValue')}
-            placeholder={t(`admin.form.contactPlaceholders.${contactType}`)}
-            autoCapitalize="off"
-            autoCorrect="off"
-            error={errors.agent_contact_value}
-            {...register('agent_contact_value')}
-          />
-        )}
-        <p className="text-hint text-sm">{t('admin.form.adminContactNote')}</p>
-      </FormSection>
-
-      {apartment.data && (
-        <button
-          type="button"
-          onClick={() => {
-            setConfirmDelete(true);
-          }}
-          className="text-danger flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-semibold"
-        >
-          <TrashIcon />
-          {t('admin.form.delete')}
-        </button>
-      )}
+      </div>
 
       <div className="border-line bg-bg fixed inset-x-0 bottom-0 z-10 border-t px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))]">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-7xl lg:flex lg:justify-end lg:px-6">
           <button
             type="submit"
             disabled={isSubmitting || (!isNew && !isDirty)}
-            className="bg-accent text-accent-fg min-h-12 w-full rounded-xl font-semibold disabled:opacity-50"
+            className="bg-accent text-accent-fg min-h-12 w-full rounded-xl font-semibold disabled:opacity-50 lg:w-80"
           >
             {uploadingIndex !== null
               ? t('admin.photos.uploadingProgress', {

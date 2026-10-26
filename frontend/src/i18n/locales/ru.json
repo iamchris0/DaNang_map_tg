@@ -141,7 +141,17 @@
     "show_few": "Показать {{count}} квартиры",
     "show_many": "Показать {{count}} квартир",
     "show_other": "Показать {{count}} квартиры",
-    "showNone": "Ничего не найдено"
+    "showNone": "Ничего не найдено",
+    "categories": {
+      "price": "Цена",
+      "bedrooms": "Спальни",
+      "district": "Район",
+      "area": "Площадь"
+    },
+    "clear": "Очистить",
+    "clearAll": "Сбросить всё",
+    "priceHint": "Аренда в месяц, млн ₫",
+    "areaHint": "Площадь, м²"
   },
   "notFound": {
     "title": "Страница не найдена",
@@ -382,7 +392,18 @@
         "unconfirmed": "Результат не удалось подтвердить.",
         "not_published": "Администратор отметил, что пост не появился."
       }
-    }
+    },
+    "listings": "Объявления",
+    "publish": "Опубликовать",
+    "actionsMenu": "Действия",
+    "iconActions": {
+      "edit": "Изменить",
+      "rented": "Отметить как сданную",
+      "archived": "В архив",
+      "delete": "Удалить"
+    },
+    "postedToChannel": "Опубликовано в Telegram-канале",
+    "statusCount": "{{label}} {{count}}"
   },
   "validation": {
     "required": "Обязательное поле",

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, type ReactNode, Suspense, useState } from 'react';
 import { type Control, Controller, type UseFormRegister, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +15,8 @@ const LocationPickerMap = lazy(() => import('./LocationPickerMap'));
 
 interface Props {
   control: Control<ApartmentFormValues>;
+  /** Address / location description field, shown inside this tile. */
+  address: ReactNode;
   register: UseFormRegister<ApartmentFormValues>;
   onPickResult: (result: GeocodeResult) => void;
   locationError: string | null;
@@ -77,6 +79,7 @@ function GeocodeSearch({ onPick }: { onPick: (result: GeocodeResult) => void }) 
 
 export function LocationSection({
   control,
+  address,
   register,
   onPickResult,
   locationError,
@@ -160,6 +163,7 @@ export function LocationSection({
         )}
         {precisionError && <p className="text-danger text-sm">{precisionError}</p>}
       </fieldset>
+      {address}
     </FormSection>
   );
 }

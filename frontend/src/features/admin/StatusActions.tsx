@@ -56,7 +56,7 @@ export function StatusActions({ apartmentId, status, compact = false }: Props) {
             }}
             className={`rounded-xl font-semibold disabled:opacity-50 ${
               compact ? 'min-h-9 px-3 text-sm' : 'min-h-11 px-4'
-            } ${target === 'available' ? 'bg-accent text-accent-fg' : 'bg-bg text-fg'}`}
+            } ${target === 'available' ? 'bg-accent text-accent-fg' : 'border-line bg-bg text-fg hover:border-fg border'}`}
           >
             {t(`admin.actions.${target}`)}
           </button>

@@ -34,7 +34,8 @@ describe('map view', () => {
     const sheet = await screen.findByRole('dialog', { name: SEA_VIEW.title });
     expect(within(sheet).getByText('12,000,000 ₫')).toBeInTheDocument();
     expect(within(sheet).getByText('1 bedroom · Sơn Trà')).toBeInTheDocument();
-    expect(within(sheet).getByText('45 m² · 1 bath')).toBeInTheDocument();
+    expect(within(sheet).getByText('45 m²')).toBeInTheDocument();
+    expect(within(sheet).getByText('1 bath')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^12M ₫/ })).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(within(sheet).getByRole('link', { name: 'View details' }));
@@ -59,36 +60,46 @@ describe('map view', () => {
 });
 
 describe('filters', () => {
-  it('filter changes update the URL and both map and list results', async () => {
+  it('category dropdowns update the URL and both map and list results', async () => {
     const api = installFakeApi();
     const user = userEvent.setup();
     const { router } = renderApp('/');
     await screen.findByText('3 apartments in this area');
 
-    await user.click(screen.getByRole('button', { name: 'Filters' }));
-    const sheet = await screen.findByRole('dialog', { name: 'Filters' });
-    await user.click(within(sheet).getByRole('button', { name: '2' }));
-    // First "Max" field is the monthly rent (in millions).
-    await user.type(within(sheet).getAllByLabelText('Max', { selector: 'input' })[0]!, '20');
+    // Phones: each category opens as a bottom sheet.
+    await user.click(screen.getByRole('button', { name: 'Bedrooms' }));
+    const rooms = await screen.findByRole('dialog', { name: 'Bedrooms' });
+    await user.click(within(rooms).getByRole('button', { name: '2' }));
+    await user.click(within(rooms).getByRole('button', { name: /^Show/ }));
+
+    await user.click(screen.getByRole('button', { name: 'Price' }));
+    const price = await screen.findByRole('dialog', { name: 'Price' });
+    await user.type(within(price).getByLabelText('Max', { selector: 'input' }), '20');
+    expect(
+      await within(price).findByRole('button', { name: 'Show 1 apartment' }),
+    ).toBeInTheDocument();
+    await user.click(within(price).getByRole('button', { name: 'Show 1 apartment' }));
 
     expect(router.state.location.search).toBe('?bedrooms=2&max_price=20000000');
-    expect(
-      await within(sheet).findByRole('button', { name: 'Show 1 apartment' }),
-    ).toBeInTheDocument();
-    await user.click(within(sheet).getByRole('button', { name: 'Show 1 apartment' }));
+    // Triggers show the current selection.
+    expect(screen.getByRole('button', { name: '2' })).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(screen.getByRole('button', { name: 'up to 20M ₫' })).toBeInTheDocument();
 
     expect(await screen.findByText('1 apartment in this area')).toBeInTheDocument();
     expect((await markerButtons()).map((m) => m.textContent)).toEqual(['16.5M ₫']);
     const lastMapQuery = api.queries('/api/apartments/map').at(-1);
     expect(lastMapQuery?.getAll('bedrooms')).toEqual(['2']);
     expect(lastMapQuery?.get('max_price')).toBe('20000000');
-    expect(screen.getByRole('button', { name: 'Filters, 2 active' })).toBeInTheDocument();
 
     // The list view shares the same filters.
     await user.click(screen.getByRole('button', { name: 'List' }));
     expect(await screen.findByText('1 apartment')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: new RegExp(RIVER_2BR.title) })).toBeInTheDocument();
     expect(screen.queryByText(SEA_VIEW.title)).not.toBeInTheDocument();
+
+    // "Clear all" resets every category.
+    await user.click(screen.getByRole('button', { name: 'Clear all' }));
+    expect(router.state.location.search).toBe('?view=list');
   });
 
   it('debounces rapid filter edits into a single request', async () => {
@@ -98,9 +109,10 @@ describe('filters', () => {
     await screen.findByText('3 apartments');
     const before = api.queries('/api/apartments').filter((q) => q.get('page_size') === '20').length;
 
-    await user.click(screen.getByRole('button', { name: 'Filters' }));
-    await user.type(screen.getAllByLabelText('Min', { selector: 'input' })[0]!, '12.5');
-    await user.click(screen.getByRole('button', { name: /^Show/ }));
+    await user.click(screen.getByRole('button', { name: 'Price' }));
+    const price = await screen.findByRole('dialog', { name: 'Price' });
+    await user.type(within(price).getByLabelText('Min', { selector: 'input' }), '12.5');
+    await user.click(within(price).getByRole('button', { name: /^Show/ }));
 
     await screen.findByText('1 apartment');
     const listQueries = api
@@ -152,7 +164,8 @@ describe('list view', () => {
     const { router } = renderApp('/?view=list');
     await screen.findByText('3 apartments');
 
-    await user.selectOptions(screen.getByRole('combobox'), 'price_asc');
+    await user.click(screen.getByRole('button', { name: 'Newest first' }));
+    await user.click(await screen.findByRole('option', { name: 'Price: low to high' }));
     expect(router.state.location.search).toBe('?view=list&sort=price_asc');
     await waitFor(() => {
       expect(api.queries('/api/apartments').at(-1)?.get('sort')).toBe('price_asc');

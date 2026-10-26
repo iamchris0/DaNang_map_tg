@@ -119,7 +119,17 @@
     "reset": "Reset",
     "show_one": "Show {{count}} apartment",
     "show_other": "Show {{count}} apartments",
-    "showNone": "No matches"
+    "showNone": "No matches",
+    "categories": {
+      "price": "Price",
+      "bedrooms": "Bedrooms",
+      "district": "District",
+      "area": "Area"
+    },
+    "clear": "Clear",
+    "clearAll": "Clear all",
+    "priceHint": "Monthly rent in million ₫",
+    "areaHint": "Area in m²"
   },
   "notFound": {
     "title": "Page not found",
@@ -356,7 +366,18 @@
         "unconfirmed": "The result could not be confirmed.",
         "not_published": "Marked as not posted by an administrator."
       }
-    }
+    },
+    "listings": "Listings",
+    "publish": "Publish",
+    "actionsMenu": "Actions",
+    "iconActions": {
+      "edit": "Edit",
+      "rented": "Mark as rented",
+      "archived": "Archive",
+      "delete": "Delete"
+    },
+    "postedToChannel": "Posted to the Telegram channel",
+    "statusCount": "{{label}} {{count}}"
   },
   "validation": {
     "required": "Required",

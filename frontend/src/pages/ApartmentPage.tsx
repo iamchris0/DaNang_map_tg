@@ -5,7 +5,17 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { useApartment } from '@/api/catalog';
 import { ApiError } from '@/api/client';
 import type { ApartmentDetail } from '@/api/types';
-import { AreaIcon, BackIcon, BedIcon, PinIcon, ShareIcon } from '@/components/ui/icons';
+import {
+  AreaIcon,
+  BackIcon,
+  BathIcon,
+  BedIcon,
+  CalendarIcon,
+  ClockIcon,
+  PinIcon,
+  ShareIcon,
+  WalletIcon,
+} from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { ContactActions } from '@/features/apartment/ContactActions';
 import { Gallery } from '@/features/apartment/Gallery';
@@ -206,16 +216,22 @@ export function ApartmentPage() {
                   value={roomsLabel(t, apartment.bedrooms)}
                 />
                 {apartment.bathrooms !== null && (
-                  <Fact label={t('apartment.bathroomsLabel')} value={apartment.bathrooms} />
+                  <Fact
+                    icon={<BathIcon />}
+                    label={t('apartment.bathroomsLabel')}
+                    value={apartment.bathrooms}
+                  />
                 )}
                 {apartment.deposit_vnd !== null && (
                   <Fact
+                    icon={<WalletIcon />}
                     label={t('apartment.deposit')}
                     value={formatPriceFull(apartment.deposit_vnd, language)}
                   />
                 )}
                 {apartment.minimum_rental_months !== null && (
                   <Fact
+                    icon={<CalendarIcon />}
                     label={t('apartment.minimumRental')}
                     value={t('apartment.months', { count: apartment.minimum_rental_months })}
                   />
@@ -248,7 +264,8 @@ export function ApartmentPage() {
               )}
             </Section>
 
-            <p className="border-line text-hint border-t pt-6 text-sm">
+            <p className="border-line text-hint flex items-center gap-2 border-t pt-6 text-sm">
+              <ClockIcon width={16} height={16} />
               {t('apartment.updated', { date: formatDate(apartment.updated_at, language) })}
             </p>
             <p aria-live="polite" className="text-sm font-semibold">
