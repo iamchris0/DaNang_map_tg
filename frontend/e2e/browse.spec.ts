@@ -34,6 +34,13 @@ test('browse the map, preview a listing and open its details', async ({ page, is
   await expect(page.getByRole('button', { name: 'Contact agent' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Contact administrator' })).toBeVisible();
 
+  // Photos open full screen.
+  await page.getByRole('button', { name: /^Open photo 1 of/ }).click();
+  const viewer = page.getByRole('dialog', { name: `Photos: ${SEA_VIEW.title}` });
+  await expect(viewer.getByRole('img', { name: /^Photo 1 of/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(viewer).toBeHidden();
+
   await page.getByRole('button', { name: 'Back' }).click();
   await expect(page).toHaveURL('/');
   await expect(map.getByRole('button', { name: /^12M ₫/ })).toBeVisible();

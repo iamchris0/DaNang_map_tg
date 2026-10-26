@@ -91,6 +91,18 @@
     "viewDetails": "Подробнее",
     "noPhoto": "Нет фото",
     "photoCount": "Фото {{index}} из {{total}}",
+    "openPhoto": "Открыть фото {{index}} из {{total}}",
+    "showAllPhotos_one": "Все фото ({{count}})",
+    "showAllPhotos_few": "Все фото ({{count}})",
+    "showAllPhotos_many": "Все фото ({{count}})",
+    "showAllPhotos_other": "Все фото ({{count}})",
+    "viewer": {
+      "title": "Фото: {{title}}",
+      "counter": "{{index}} / {{total}}",
+      "close": "Закрыть фото",
+      "previous": "Предыдущее фото",
+      "next": "Следующее фото"
+    },
     "updated": "Обновлено {{date}}",
     "facts": "Основное",
     "area": "Площадь",

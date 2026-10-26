@@ -5,8 +5,15 @@ import type { Image } from '@/api/types';
 
 import { ApartmentPhoto } from './ApartmentPhoto';
 
-/** Swipeable, scroll-snapping photo gallery. */
-export function Gallery({ images, title }: { images: Image[]; title: string }) {
+interface Props {
+  images: Image[];
+  title: string;
+  /** Open the full-screen viewer at this photo. */
+  onOpen: (index: number) => void;
+}
+
+/** Swipeable, scroll-snapping photo gallery; tap a photo to view it full screen. */
+export function Gallery({ images, title, onOpen }: Props) {
   const { t } = useTranslation();
   const [index, setIndex] = useState(0);
 
@@ -26,12 +33,21 @@ export function Gallery({ images, title }: { images: Image[]; title: string }) {
       >
         {images.map((image, i) => (
           <li key={image.id} className="w-full shrink-0 snap-center">
-            <ApartmentPhoto
-              image={image}
-              alt={t('apartment.photoCount', { index: i + 1, total: images.length })}
-              className="h-full w-full"
-              eager={i === 0}
-            />
+            <button
+              type="button"
+              onClick={() => {
+                onOpen(i);
+              }}
+              aria-label={t('apartment.openPhoto', { index: i + 1, total: images.length })}
+              className="block h-full w-full"
+            >
+              <ApartmentPhoto
+                image={image}
+                alt={t('apartment.photoCount', { index: i + 1, total: images.length })}
+                className="h-full w-full"
+                eager={i === 0}
+              />
+            </button>
           </li>
         ))}
       </ul>

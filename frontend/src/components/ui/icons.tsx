@@ -190,3 +190,21 @@ export const SendIcon = (p: IconProps) => (
     <path d="M21 3 10 14M21 3l-7 18-4-7-7-4z" />
   </Icon>
 );
+export const ChevronLeftIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m15 18-6-6 6-6" />
+  </Icon>
+);
+export const ChevronRightIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m9 18 6-6-6-6" />
+  </Icon>
+);
+export const GridIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+    <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+    <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+    <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+  </Icon>
+);

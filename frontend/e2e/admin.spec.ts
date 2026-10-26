@@ -194,6 +194,8 @@ test('an administrator creates, illustrates and publishes a listing', async ({ p
     mimeType: 'image/jpeg',
     buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0]),
   });
+  // A photo alone is an unsaved change; it is uploaded on save.
+  await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByText('1 photo uploaded')).toBeVisible();
   await expect(page.getByRole('img', { name: 'Photo 1' })).toBeVisible();
   await expect(page.getByText('Cover', { exact: true })).toBeVisible();

@@ -45,6 +45,15 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
+// jsdom has no object URLs (used for local photo previews).
+if (typeof URL.createObjectURL !== 'function') {
+  let next = 0;
+  Object.assign(URL, {
+    createObjectURL: () => `blob:test/${String((next += 1))}`,
+    revokeObjectURL: () => undefined,
+  });
+}
+
 // MapLibre needs WebGL; tests use a DOM-only fake (see fakeMaplibre.ts).
 vi.mock('maplibre-gl', async () => (await import('./fakeMaplibre')).maplibreModule);
 vi.mock('@/features/map/webgl', () => ({ hasWebGL: () => true }));

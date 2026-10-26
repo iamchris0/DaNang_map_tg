@@ -4,10 +4,19 @@ import { useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useBlocker, useNavigate, useParams } from 'react-router';
 
-import { uploadImage, useAdminApartment, useDeleteApartment, useSaveApartment } from '@/api/admin';
+import {
+  deleteImage,
+  fetchAdminApartment,
+  reorderImages,
+  uploadImage,
+  useAdminApartment,
+  useDeleteApartment,
+  useRefreshListing,
+  useSaveApartment,
+} from '@/api/admin';
 import { useDistricts } from '@/api/catalog';
 import { ApiError } from '@/api/client';
-import type { AdminApartment } from '@/api/types';
+import type { AdminApartment, Image } from '@/api/types';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { TrashIcon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
@@ -16,10 +25,12 @@ import { adminErrorMessage, missingFieldsLabel } from '@/features/admin/errors';
 import { FormSection, SelectField, TextAreaField, TextField } from '@/features/admin/form/fields';
 import { LocationSection } from '@/features/admin/form/LocationSection';
 import {
-  PhotoManager,
-  type StagedPhoto,
-  StagedPhotoManager,
-} from '@/features/admin/form/PhotoManager';
+  fromImages,
+  type PhotoItem,
+  photosChanged,
+  releasePreviews,
+} from '@/features/admin/form/photoDraft';
+import { PhotoEditor } from '@/features/admin/form/PhotoManager';
 import {
   apartmentSchema,
   type ApartmentFormValues,
@@ -85,12 +96,15 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
   const { register, handleSubmit, control, reset, setError, setValue, formState } = form;
   const { errors, isDirty: fieldsDirty, isSubmitting } = formState;
 
-  // New listings: photos are picked before the listing exists and uploaded right after
-  // "Save draft" creates it.
-  const [staged, setStaged] = useState<StagedPhoto[]>([]);
+  // Photos are edited like any other field: added, reordered and removed locally, and
+  // applied when the form is saved (for new listings right after the draft is created).
+  const refreshListing = useRefreshListing();
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
-  const isDirty = fieldsDirty || staged.length > 0;
+  const [uploading, setUploading] = useState<{ current: number; total: number } | null>(null);
+  const savedImages = apartment.data?.images;
+  const photosDirty = isNew ? photos.length > 0 : photosChanged(photos, savedImages ?? []);
+  const isDirty = fieldsDirty || photosDirty;
 
   // Load the listing into the form once (later refetches must not overwrite edits).
   const loadedId = useRef<string | null>(null);
@@ -98,6 +112,7 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
     if (apartment.data && loadedId.current !== apartment.data.id) {
       loadedId.current = apartment.data.id;
       reset(fromApartment(apartment.data));
+      setPhotos(fromImages(apartment.data.images));
     }
   }, [apartment.data, reset]);
 
@@ -125,45 +140,79 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
 
   const leaveTo = (path: string) => {
     reset(undefined, { keepValues: true });
-    setStaged([]);
+    releasePreviews(photos);
+    setPhotos([]);
     setRedirectTo(path);
   };
 
-  const uploadStaged = async (apartmentId: string) => {
+  /** Upload new photos, delete removed ones, then apply the edited order. */
+  const syncPhotos = async (apartmentId: string, original: Image[]) => {
+    const fresh = photos.flatMap((item) => (item.kind === 'new' ? [item] : []));
+    const uploadedIds = new Map<string, string>();
     let failed = 0;
-    for (const [index, photo] of staged.entries()) {
-      setUploadingIndex(index);
+    const fail = (name: string, error: unknown) => {
+      failed += 1;
+      toast(t('admin.photos.rejected', { name, reason: adminErrorMessage(t, error) }), 'error');
+    };
+
+    for (const [index, item] of fresh.entries()) {
+      setUploading({ current: index + 1, total: fresh.length });
       try {
-        await uploadImage(apartmentId, photo.file, (fraction) => {
-          setUploadProgress((current) => ({ ...current, [photo.key]: fraction }));
+        const image = await uploadImage(apartmentId, item.file, (fraction) => {
+          setUploadProgress((current) => ({ ...current, [item.key]: fraction }));
         });
+        uploadedIds.set(item.key, image.id);
       } catch (error) {
-        failed += 1;
-        toast(
-          t('admin.photos.rejected', {
-            name: photo.file.name,
-            reason: adminErrorMessage(t, error),
-          }),
-          'error',
-        );
+        fail(item.file.name, error);
       }
     }
-    staged.forEach((photo) => {
-      URL.revokeObjectURL(photo.src);
-    });
-    setUploadingIndex(null);
+    setUploading(null);
     setUploadProgress({});
-    return staged.length - failed;
+
+    const kept = new Set(photos.flatMap((item) => (item.kind === 'saved' ? [item.image.id] : [])));
+    for (const [index, image] of original.entries()) {
+      if (kept.has(image.id)) continue;
+      try {
+        await deleteImage(apartmentId, image.id);
+      } catch (error) {
+        fail(t('admin.photos.photoAlt', { index: index + 1 }), error);
+      }
+    }
+
+    let server = await fetchAdminApartment(apartmentId);
+    const serverIds = server.images.map((image) => image.id);
+    const wanted = photos.flatMap((item) =>
+      item.kind === 'saved' ? [item.image.id] : (uploadedIds.get(item.key) ?? []),
+    );
+    // Photos that couldn't be removed stay, after the requested ones.
+    const order = [
+      ...wanted.filter((id) => serverIds.includes(id)),
+      ...serverIds.filter((id) => !wanted.includes(id)),
+    ];
+    if (order.join() !== serverIds.join()) {
+      await reorderImages(apartmentId, order);
+      server = await fetchAdminApartment(apartmentId);
+    }
+    releasePreviews(photos);
+    return { server, uploaded: uploadedIds.size, failed };
   };
 
   const onSubmit = handleSubmit(async (values) => {
     try {
-      const saved = await save.mutateAsync(toInput(values));
-      const uploaded = isNew && staged.length ? await uploadStaged(saved.id) : 0;
-      reset(fromApartment(saved));
+      let result = apartment.data;
+      if (isNew || fieldsDirty || !result) result = await save.mutateAsync(toInput(values));
+      let uploaded = 0;
+      if (photosDirty) {
+        const synced = await syncPhotos(result.id, isNew ? [] : (savedImages ?? []));
+        result = synced.server;
+        uploaded = synced.uploaded;
+        refreshListing(result);
+      }
+      reset(fromApartment(result));
+      setPhotos(fromImages(result.images));
       toast(isNew ? t('admin.form.created') : t('admin.form.saved'));
       if (uploaded > 0) toast(t('admin.photos.uploaded', { count: uploaded }));
-      if (isNew) leaveTo(`/admin/apartments/${saved.id}`);
+      if (isNew) leaveTo(`/admin/apartments/${result.id}`);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'validation_error') {
         const details = Array.isArray(error.details) ? (error.details as { loc: unknown[] }[]) : [];
@@ -301,11 +350,12 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
           />
 
           <FormSection title={t('admin.form.sections.photos')}>
-            {apartment.data ? (
-              <PhotoManager apartmentId={apartment.data.id} images={apartment.data.images} />
-            ) : (
-              <StagedPhotoManager photos={staged} onChange={setStaged} progress={uploadProgress} />
-            )}
+            <PhotoEditor
+              photos={photos}
+              onChange={setPhotos}
+              progress={uploadProgress}
+              busy={isSubmitting}
+            />
           </FormSection>
         </div>
         <div className="space-y-4">
@@ -390,11 +440,8 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
             disabled={isSubmitting || (!isNew && !isDirty)}
             className="bg-accent text-accent-fg min-h-12 w-full rounded-xl font-semibold disabled:opacity-50 lg:w-80"
           >
-            {uploadingIndex !== null
-              ? t('admin.photos.uploadingProgress', {
-                  current: uploadingIndex + 1,
-                  total: staged.length,
-                })
+            {uploading
+              ? t('admin.photos.uploadingProgress', uploading)
               : isSubmitting
                 ? t('admin.form.saving')
                 : isNew

@@ -21,6 +21,7 @@ import { ContactActions } from '@/features/apartment/ContactActions';
 import { Gallery } from '@/features/apartment/Gallery';
 import { roomsLabel } from '@/features/apartment/labels';
 import { PhotoMosaic } from '@/features/apartment/PhotoMosaic';
+import { PhotoViewer } from '@/features/apartment/PhotoViewer';
 import { districtName, formatArea, formatDate, formatPriceFull } from '@/lib/format';
 import { DESKTOP_QUERY, useMediaQuery } from '@/lib/useMediaQuery';
 import { bindBackButton, isInTelegram, shareLink } from '@/telegram/webapp';
@@ -75,7 +76,16 @@ export function ApartmentPage() {
     if (location.key === 'default') void navigate('/', { replace: true });
     else void navigate(-1);
   }, [location.key, navigate]);
-  useEffect(() => bindBackButton(goBack), [goBack]);
+  // Full-screen photo viewer; Telegram's back button closes it before leaving the page.
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const closeViewer = useCallback(() => {
+    setViewerIndex(null);
+  }, []);
+  const viewerOpen = viewerIndex !== null;
+  useEffect(
+    () => bindBackButton(viewerOpen ? closeViewer : goBack),
+    [viewerOpen, closeViewer, goBack],
+  );
 
   const share = () => {
     if (!data) return;
@@ -175,11 +185,15 @@ export function ApartmentPage() {
               </div>
               {shareButton}
             </div>
-            <PhotoMosaic images={apartment.images} title={apartment.title} />
+            <PhotoMosaic
+              images={apartment.images}
+              title={apartment.title}
+              onOpen={setViewerIndex}
+            />
           </>
         ) : (
           <div className="relative">
-            <Gallery images={apartment.images} title={apartment.title} />
+            <Gallery images={apartment.images} title={apartment.title} onOpen={setViewerIndex} />
             <div className="absolute inset-x-0 top-0 flex justify-between px-4 pt-[calc(0.75rem+var(--safe-top))]">
               {backButton || <span />}
               {shareButton}
@@ -297,6 +311,15 @@ export function ApartmentPage() {
             layout="row"
           />
         </div>
+      )}
+
+      {viewerIndex !== null && apartment.images.length > 0 && (
+        <PhotoViewer
+          images={apartment.images}
+          startIndex={viewerIndex}
+          title={apartment.title}
+          onClose={closeViewer}
+        />
       )}
     </div>
   );

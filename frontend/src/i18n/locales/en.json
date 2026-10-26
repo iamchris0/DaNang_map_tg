@@ -75,6 +75,16 @@
     "viewDetails": "View details",
     "noPhoto": "No photo",
     "photoCount": "Photo {{index}} of {{total}}",
+    "openPhoto": "Open photo {{index}} of {{total}}",
+    "showAllPhotos_one": "Show {{count}} photo",
+    "showAllPhotos_other": "Show all {{count}} photos",
+    "viewer": {
+      "title": "Photos: {{title}}",
+      "counter": "{{index}} / {{total}}",
+      "close": "Close photos",
+      "previous": "Previous photo",
+      "next": "Next photo"
+    },
     "updated": "Updated {{date}}",
     "facts": "Key facts",
     "area": "Area",

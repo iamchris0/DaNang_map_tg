@@ -241,45 +241,82 @@ describe('listing form', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Missing required fields: a photo');
   });
 
-  it('uploads, reorders and removes photos', async () => {
-    const api = installFakeAdminApi([{ ...COMPLETE, images: [makeImage('first')] }]);
+  it('treats photo changes as unsaved edits and applies them on save', async () => {
+    const api = installFakeAdminApi([
+      { ...COMPLETE, images: [makeImage('first'), makeImage('second')] },
+    ]);
     const user = userEvent.setup({ applyAccept: false });
-    renderApp('/admin/apartments/00000000-0000-4000-8000-000000000001');
-    await screen.findByText('1/15', { exact: false });
+    const { router } = renderApp('/admin/apartments/00000000-0000-4000-8000-000000000001');
+    await screen.findByText('2/15', { exact: false });
+    const save = screen.getByRole('button', { name: 'Save changes' });
+    expect(save).toBeDisabled();
 
-    const photos = [
+    const files = [
       new File(['x'], 'balcony.jpg', { type: 'image/jpeg' }),
       new File(['x'], 'notes.pdf', { type: 'application/pdf' }),
     ];
-    await user.upload(screen.getByTestId('photo-input'), photos);
-
+    await user.upload(screen.getByTestId('photo-input'), files);
     expect(await screen.findByText('notes.pdf: not a JPEG, PNG or WebP image')).toBeInTheDocument();
-    expect(await screen.findByText('1 photo uploaded')).toBeInTheDocument();
-    expect(await screen.findByRole('img', { name: 'Photo 2' })).toBeInTheDocument();
-    expect(api.requests.filter((r) => r.method === 'POST').map((r) => r.body)).toEqual([
-      'balcony.jpg',
-    ]);
+    expect(screen.getByRole('img', { name: 'Photo 3' })).toBeInTheDocument();
+    // Only a photo changed, and that alone makes the listing savable.
+    expect(save).toBeEnabled();
 
-    // Make the new photo the cover.
+    // Make the new photo the cover and drop "second"; nothing is sent yet.
     const covers = screen.getAllByRole('button', { name: 'Make cover' });
-    await user.click(covers[1]!);
-    await waitFor(() => {
-      expect(api.requests.at(-2)).toMatchObject({
-        method: 'PATCH',
-        body: { image_ids: ['img-balcony.jpg', 'first'] },
-      });
-    });
+    await user.click(covers.at(-1)!);
+    await user.click(screen.getAllByRole('button', { name: 'Remove photo' })[2]!);
+    expect(screen.getAllByRole('img', { name: /^Photo \d$/ })).toHaveLength(2);
+    const isImageRequest = (r: { path: string }) => r.path.includes('/images');
+    expect(api.requests.filter(isImageRequest)).toEqual([]);
 
-    await user.click(screen.getAllByRole('button', { name: 'Remove photo' })[1]!);
+    // Leaving with only photo changes still asks first.
+    await user.click(screen.getByRole('link', { name: 'Back' }));
     await user.click(
-      within(screen.getByRole('dialog', { name: 'Remove this photo?' })).getByRole('button', {
-        name: 'Delete',
-      }),
+      within(await screen.findByRole('dialog', { name: 'Discard unsaved changes?' })).getByRole(
+        'button',
+        { name: 'Keep editing' },
+      ),
     );
-    expect(await screen.findByText('Photo removed')).toBeInTheDocument();
+    expect(router.state.location.pathname).toMatch(/^\/admin\/apartments\//);
+
+    await user.click(save);
+    expect(await screen.findByText('Changes saved')).toBeInTheDocument();
+    expect(screen.getByText('1 photo uploaded')).toBeInTheDocument();
+    const imageRequests = api.requests.filter(isImageRequest);
+    expect(imageRequests.map((r) => [r.method, r.body ?? null])).toEqual([
+      ['POST', 'balcony.jpg'],
+      ['DELETE', null],
+      ['PATCH', { image_ids: ['img-balcony.jpg', 'first'] }],
+    ]);
+    expect(imageRequests[1]?.path).toMatch(/\/images\/second$/);
+    // The listing fields were unchanged, so they were not re-sent.
+    expect(api.requests.some((r) => r.method === 'PATCH' && !isImageRequest(r))).toBe(false);
     await waitFor(() => {
-      expect(screen.getAllByRole('img', { name: /^Photo \d$/ })).toHaveLength(1);
+      expect(save).toBeDisabled();
     });
+    expect(screen.getAllByRole('img', { name: /^Photo \d$/ })).toHaveLength(2);
+  });
+
+  it('uploads photos picked before a new listing is first saved', async () => {
+    const api = installFakeAdminApi();
+    const user = userEvent.setup();
+    const { router } = renderApp('/admin/apartments/new');
+    await user.type(await screen.findByLabelText('Title'), 'Garden 2BR');
+    await user.upload(
+      screen.getByTestId('photo-input'),
+      new File(['x'], 'garden.jpg', { type: 'image/jpeg' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    expect(await screen.findByText('1 photo uploaded')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toMatch(/^\/admin\/apartments\/0{8}-/);
+    });
+    expect(api.requests.find((r) => r.method === 'POST' && r.path.endsWith('/images'))?.body).toBe(
+      'garden.jpg',
+    );
+    expect(await screen.findByRole('img', { name: 'Photo 1' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
   });
 
   it('deletes a listing after confirmation', async () => {

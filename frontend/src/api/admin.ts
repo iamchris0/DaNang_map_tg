@@ -102,29 +102,32 @@ export function useDeleteApartment() {
   });
 }
 
-export function useImageMutations(apartmentId: string) {
+export function deleteImage(apartmentId: string, imageId: string): Promise<undefined> {
+  return apiFetch<undefined>(`/api/admin/apartments/${apartmentId}/images/${imageId}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Set the photo order; the first photo becomes the cover. */
+export function reorderImages(apartmentId: string, imageIds: string[]): Promise<Image[]> {
+  return apiFetch<Image[]>(`/api/admin/apartments/${apartmentId}/images/order`, {
+    method: 'PATCH',
+    json: { image_ids: imageIds },
+  });
+}
+
+export function fetchAdminApartment(apartmentId: string): Promise<AdminApartment> {
+  return apiFetch<AdminApartment>(`/api/admin/apartments/${apartmentId}`);
+}
+
+/** Refresh admin and public views after photo changes. */
+export function useRefreshListing() {
   const queryClient = useQueryClient();
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: adminApartmentKey(apartmentId) });
+  return (apartment: AdminApartment) => {
+    queryClient.setQueryData(adminApartmentKey(apartment.id), apartment);
     void queryClient.invalidateQueries({ queryKey: [...ADMIN_KEY, 'list'] });
     void queryClient.invalidateQueries({ queryKey: ['apartments'] });
   };
-  const reorder = useMutation({
-    mutationFn: (imageIds: string[]) =>
-      apiFetch<Image[]>(`/api/admin/apartments/${apartmentId}/images/order`, {
-        method: 'PATCH',
-        json: { image_ids: imageIds },
-      }),
-    onSuccess: refresh,
-  });
-  const remove = useMutation({
-    mutationFn: (imageId: string) =>
-      apiFetch<undefined>(`/api/admin/apartments/${apartmentId}/images/${imageId}`, {
-        method: 'DELETE',
-      }),
-    onSuccess: refresh,
-  });
-  return { reorder, remove, refresh };
 }
 
 /**
