@@ -1,7 +1,10 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
+
+import { useAuth } from '@/auth/useAuth';
 
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { FilterIcon, ListIcon, MapIcon } from '@/components/ui/icons';
+import { FilterIcon, ListIcon, MapIcon, SettingsIcon } from '@/components/ui/icons';
 import type { CatalogView } from '@/features/filters/useCatalogState';
 
 interface Props {
@@ -13,6 +16,7 @@ interface Props {
 
 export function CatalogHeader({ view, onViewChange, activeFilters, onOpenFilters }: Props) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const views: { id: CatalogView; label: string; Icon: typeof MapIcon }[] = [
     { id: 'map', label: t('catalog.map'), Icon: MapIcon },
     { id: 'list', label: t('catalog.list'), Icon: ListIcon },
@@ -62,6 +66,15 @@ export function CatalogHeader({ view, onViewChange, activeFilters, onOpenFilters
           </span>
         )}
       </button>
+      {user?.is_admin && (
+        <Link
+          to="/admin"
+          aria-label={t('admin.open')}
+          className="bg-surface flex size-9 shrink-0 items-center justify-center rounded-full"
+        >
+          <SettingsIcon width={18} height={18} />
+        </Link>
+      )}
       <LanguageSwitcher />
     </header>
   );

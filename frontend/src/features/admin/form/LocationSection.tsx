@@ -1,0 +1,158 @@
+import { lazy, Suspense, useState } from 'react';
+import { type Control, Controller, type UseFormRegister, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+
+import { useGeocode } from '@/api/admin';
+import type { GeocodeResult } from '@/api/types';
+import { SearchIcon } from '@/components/ui/icons';
+import { Spinner } from '@/components/ui/Spinner';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
+
+import { FormSection } from './fields';
+import type { ApartmentFormValues } from './schema';
+
+const LocationPickerMap = lazy(() => import('./LocationPickerMap'));
+
+interface Props {
+  control: Control<ApartmentFormValues>;
+  register: UseFormRegister<ApartmentFormValues>;
+  onPickResult: (result: GeocodeResult) => void;
+  locationError: string | null;
+  precisionError: string | null;
+}
+
+function GeocodeSearch({ onPick }: { onPick: (result: GeocodeResult) => void }) {
+  const { t, i18n } = useTranslation();
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const debounced = useDebouncedValue(query.trim(), 500);
+  const search = useGeocode(debounced, i18n.resolvedLanguage ?? 'en');
+  const showResults = open && debounced.length >= 3;
+
+  return (
+    <div className="relative">
+      <label className="border-hint/30 bg-bg flex items-center gap-2 rounded-xl border px-3">
+        <SearchIcon className="text-hint" />
+        <span className="sr-only">{t('admin.location.search')}</span>
+        <input
+          type="search"
+          value={query}
+          placeholder={t('admin.location.search')}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          className="min-h-11 flex-1 bg-transparent outline-none"
+        />
+        {search.isFetching && <Spinner className="size-4" />}
+      </label>
+      {showResults && !search.isFetching && (
+        <ul className="bg-bg absolute inset-x-0 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-xl shadow-lg">
+          {search.isError ? (
+            <li className="text-hint p-3 text-sm">{t('admin.location.searchFailed')}</li>
+          ) : search.data?.length === 0 ? (
+            <li className="text-hint p-3 text-sm">{t('admin.location.noResults')}</li>
+          ) : (
+            search.data?.map((result) => (
+              <li key={`${result.latitude},${result.longitude}`}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onPick(result);
+                    setOpen(false);
+                    setQuery('');
+                  }}
+                  className="hover:bg-surface w-full px-3 py-2.5 text-left text-sm"
+                >
+                  {result.label}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+export function LocationSection({
+  control,
+  register,
+  onPickResult,
+  locationError,
+  precisionError,
+}: Props) {
+  const { t } = useTranslation();
+  const [fromSearch, setFromSearch] = useState(false);
+  const precision = useWatch({ control, name: 'location_precision' });
+
+  return (
+    <FormSection title={t('admin.form.sections.location')}>
+      <GeocodeSearch
+        onPick={(result) => {
+          setFromSearch(true);
+          onPickResult(result);
+        }}
+      />
+      <p className="text-hint text-sm">{t('admin.location.hint')}</p>
+      <Controller
+        control={control}
+        name="location"
+        render={({ field }) => (
+          <div className="space-y-2">
+            <Suspense fallback={<div className="bg-bg h-72 rounded-xl" />}>
+              <LocationPickerMap
+                value={field.value}
+                onChange={(value) => {
+                  setFromSearch(false);
+                  field.onChange(value);
+                }}
+              />
+            </Suspense>
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span data-testid="coordinates" className="text-hint">
+                {field.value
+                  ? `${field.value.latitude.toFixed(5)}, ${field.value.longitude.toFixed(5)}`
+                  : t('admin.location.noPin')}
+              </span>
+              {field.value && (
+                <button
+                  type="button"
+                  className="text-danger font-medium"
+                  onClick={() => {
+                    field.onChange(null);
+                  }}
+                >
+                  {t('admin.location.clear')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      />
+      {locationError && <p className="text-danger text-sm">{locationError}</p>}
+      {fromSearch && <p className="text-sm text-amber-600">{t('admin.location.fromSearch')}</p>}
+
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">{t('admin.location.precision')}</legend>
+        <div className="flex flex-wrap gap-2">
+          {(['exact', 'approximate'] as const).map((value) => (
+            <label
+              key={value}
+              className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-3 ${
+                precision === value ? 'border-accent' : 'border-hint/30'
+              }`}
+            >
+              <input type="radio" value={value} {...register('location_precision')} />
+              {t(`admin.location.${value}`)}
+            </label>
+          ))}
+        </div>
+        {precision === 'approximate' && (
+          <p className="text-hint text-sm">{t('admin.location.approximateHint')}</p>
+        )}
+        {precisionError && <p className="text-danger text-sm">{precisionError}</p>}
+      </fieldset>
+    </FormSection>
+  );
+}

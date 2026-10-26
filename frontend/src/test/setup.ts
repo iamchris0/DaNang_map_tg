@@ -52,18 +52,20 @@ vi.mock('@/features/map/webgl', () => ({ hasWebGL: () => true }));
 const { default: i18n } = await import('@/i18n');
 const { setSessionToken } = await import('@/api/session');
 const { resetStartParamForTests } = await import('@/telegram/webapp');
-const { maps } = await import('./fakeMaplibre');
+const { maps, markers } = await import('./fakeMaplibre');
 const { resetLoginForTests } = await import('@/auth/login');
 
 afterEach(async () => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   localStorage.clear();
   sessionStorage.clear();
   setSessionToken(null);
   resetStartParamForTests();
   resetLoginForTests();
   maps.length = 0;
+  markers.length = 0;
   delete (window as unknown as { Telegram?: unknown }).Telegram;
   await i18n.changeLanguage('en');
 });

@@ -19,6 +19,7 @@ function apartment(overrides: Partial<ApartmentDetail> & { id: string }): Apartm
     cover_image: {
       id: `${overrides.id}-img`,
       url: `/img/${overrides.id}.png`,
+      thumb_url: `/img/${overrides.id}-sm.png`,
       width: 4,
       height: 3,
     },
@@ -30,7 +31,15 @@ function apartment(overrides: Partial<ApartmentDetail> & { id: string }): Apartm
     deposit_vnd: 12_000_000,
     minimum_rental_months: 6,
     rental_conditions: 'No smoking',
-    images: [{ id: `${overrides.id}-img`, url: `/img/${overrides.id}.png`, width: 4, height: 3 }],
+    images: [
+      {
+        id: `${overrides.id}-img`,
+        url: `/img/${overrides.id}.png`,
+        thumb_url: `/img/${overrides.id}-sm.png`,
+        width: 4,
+        height: 3,
+      },
+    ],
     agent_contact: {
       type: 'telegram_username',
       value: 'agent_minh',

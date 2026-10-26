@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.core import rate_limit
 from app.core.config import Settings, get_settings
+from app.core.storage import get_storage
 from app.db.session import get_db
 from app.main import create_app
 
@@ -62,10 +63,30 @@ def settings() -> Settings:
     )
 
 
+class MemoryStorage:
+    """In-memory ObjectStorage used instead of S3 in tests."""
+
+    def __init__(self) -> None:
+        self.objects: dict[str, tuple[bytes, str]] = {}
+
+    def put(self, key: str, data: bytes, content_type: str) -> None:
+        self.objects[key] = (data, content_type)
+
+    def delete(self, keys: list[str]) -> None:
+        for key in keys:
+            self.objects.pop(key, None)
+
+
 @pytest.fixture
-def app(settings: Settings) -> FastAPI:
+def storage() -> MemoryStorage:
+    return MemoryStorage()
+
+
+@pytest.fixture
+def app(settings: Settings, storage: MemoryStorage) -> FastAPI:
     application = create_app()
     application.dependency_overrides[get_settings] = lambda: settings
+    application.dependency_overrides[get_storage] = lambda: storage
     return application
 
 

@@ -154,3 +154,33 @@ rounded to ~100 m to reuse cached queries.
 
 The API token from `/api/auth/telegram` lives in memory and `sessionStorage`: it survives
 a reload of the Mini App but not closing it. Public browsing never needs it.
+
+## D23. Image pipeline
+
+Uploads are checked against both the declared MIME type and the real file format (Pillow),
+with a decompression-bomb limit (40 MP). They are rotated by EXIF orientation and
+re-encoded to WebP at 1600 px and 480 px. Re-encoding strips all metadata, including GPS
+coordinates from phone photos. Clients get `url` (large) and `thumb_url`; cards use
+`srcset` so phones download the small one. Uploads are one file per request (sequential
+in the UI) so each file reports progress and fails independently. Sort orders stay
+contiguous from 0, and the cover is always `sort_order = 0`. A non-draft listing can't
+lose its last photo. If saving the database row fails, the stored objects are removed;
+deleting a photo removes its objects after the commit (best effort, logged).
+
+## D24. Geocoding through the backend
+
+The admin location search goes through `GET /api/admin/geocode`. This keeps the provider
+switchable (`GEOCODING_URL`), applies its usage policy in one place (identifying
+User-Agent, a global 1 request/second limit, a 24 h in-memory cache), limits results to
+the service area, and means admins never need a key. Picking a search result sets
+precision to *approximate*, because results are often a street or district; the admin
+confirms *exact* explicitly.
+
+## D25. Admin forms
+
+React Hook Form + Zod for client-side validation. Messages are i18n keys, and inputs
+stay strings while editing (prices accept "13,500,000"). The backend stays authoritative:
+the status panel shows its `missing_fields`, and server errors are mapped to translated
+messages by error code. Photos need a saved listing, so the first save creates a draft and
+opens the edit page. The admin chunk (forms, validation) is lazy-loaded and never
+downloaded by regular users.

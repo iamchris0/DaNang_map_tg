@@ -19,14 +19,17 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.9.2",
     "@tanstack/react-query": "^5.104.5",
     "i18next": "^26.5.11",
     "maplibre-gl": "^6.16.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
+    "react-hook-form": "^7.91.0",
     "react-i18next": "^17.1.9",
     "react-router": "^8.5.0",
-    "supercluster": "^9.1.0"
+    "supercluster": "^9.1.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

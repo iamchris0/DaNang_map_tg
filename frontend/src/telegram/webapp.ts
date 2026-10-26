@@ -121,3 +121,11 @@ export function bindBackButton(onBack: () => void): () => void {
     webApp.BackButton.hide();
   };
 }
+
+/** Ask Telegram to confirm before closing the Mini App (e.g. while a form has unsaved changes). */
+export function setClosingConfirmation(enabled: boolean): void {
+  const webApp = getWebApp();
+  if (!webApp?.isVersionAtLeast('6.2')) return;
+  if (enabled) webApp.enableClosingConfirmation();
+  else webApp.disableClosingConfirmation();
+}

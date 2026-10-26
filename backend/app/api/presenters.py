@@ -18,6 +18,7 @@ from app.schemas.apartment import (
     PublicationSummary,
 )
 from app.schemas.common import DistrictOut, ImageOut
+from app.services.images import variant_key
 
 
 def _present[T](value: T | None, name: str) -> T:
@@ -30,7 +31,8 @@ def _present[T](value: T | None, name: str) -> T:
 def image_out(settings: Settings, image: ApartmentImage) -> ImageOut:
     return ImageOut(
         id=image.id,
-        url=image_url(settings, image.storage_key),
+        url=image_url(settings, variant_key(image.storage_key, "lg")),
+        thumb_url=image_url(settings, variant_key(image.storage_key, "sm")),
         width=image.width,
         height=image.height,
     )

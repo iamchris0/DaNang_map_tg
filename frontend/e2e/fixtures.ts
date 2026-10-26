@@ -12,7 +12,7 @@ const BLANK_STYLE = {
 async function mockBackend(page: Page) {
   await page.route('https://telegram.org/**', (route) => route.fulfill({ body: '' }));
   await page.route('**/e2e/map-style.json', (route) => route.fulfill({ json: BLANK_STYLE }));
-  await page.route('**/img/*.png', (route) =>
+  await page.route('**/img/**', (route) =>
     route.fulfill({
       contentType: 'image/svg+xml',
       body: '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><rect width="4" height="3" fill="#7aa"/></svg>',

@@ -5,12 +5,14 @@ survives a service-level rollback while the outer test transaction still discard
 
 import hashlib
 import hmac
+import io
 import json
 import time
 import uuid
 from typing import Any
 from urllib.parse import urlencode
 
+from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,6 +61,15 @@ async def district_id(db: AsyncSession, slug: str = "son-tra") -> int:
     if found is None:
         raise LookupError(slug)
     return found
+
+
+def image_bytes(
+    image_format: str = "JPEG", size: tuple[int, int] = (2400, 1800), mode: str = "RGB"
+) -> bytes:
+    """A real encoded image (gradient-free, so it stays small)."""
+    buffer = io.BytesIO()
+    Image.new(mode, size, (200, 120, 40, 255)[: len(mode)]).save(buffer, format=image_format)
+    return buffer.getvalue()
 
 
 async def add_image(

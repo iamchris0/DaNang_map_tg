@@ -9,10 +9,18 @@ interface Props {
   alt: string;
   className?: string;
   eager?: boolean;
+  /** `sizes` attribute so the browser can pick the thumbnail or the large variant. */
+  sizes?: string;
 }
 
 /** Cover-cropped photo with intrinsic size hints and a graceful placeholder. */
-export function ApartmentPhoto({ image, alt, className = '', eager = false }: Props) {
+export function ApartmentPhoto({
+  image,
+  alt,
+  className = '',
+  eager = false,
+  sizes = '100vw',
+}: Props) {
   const { t } = useTranslation();
   const [failed, setFailed] = useState(false);
 
@@ -30,6 +38,8 @@ export function ApartmentPhoto({ image, alt, className = '', eager = false }: Pr
   return (
     <img
       src={image.url}
+      srcSet={`${image.thumb_url} 480w, ${image.url} 1600w`}
+      sizes={sizes}
       alt={alt}
       width={image.width}
       height={image.height}

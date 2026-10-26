@@ -23,6 +23,8 @@ class DistrictOut(Schema):
 
 class ImageOut(Schema):
     id: uuid.UUID
+    # Large variant (max 1600 px) and thumbnail (max 480 px), both WebP.
     url: str
+    thumb_url: str
     width: int
     height: int

@@ -8,7 +8,7 @@ from app.api import presenters
 from app.api.deps import AdminUser, AppSettings, DbSession, limit_admin_write, require_admin
 from app.core.config import Settings
 from app.models import Apartment
-from app.models.enums import ApartmentStatus
+from app.models.enums import ApartmentStatus, Language
 from app.schemas.apartment import (
     AdminApartmentListItem,
     AdminApartmentOut,
@@ -17,8 +17,8 @@ from app.schemas.apartment import (
     DashboardOut,
     StatusUpdate,
 )
-from app.schemas.common import Page
-from app.services import apartments
+from app.schemas.common import Page, Schema
+from app.services import apartments, geocoding
 
 # Every route here requires a verified administrator, whatever the frontend shows.
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -29,6 +29,24 @@ async def _detail(db: AsyncSession, settings: Settings, apartment: Apartment) ->
     missing = apartments.missing_publish_fields(apartment, len(apartment.images))
     publication = await apartments.latest_publication(db, apartment.id)
     return presenters.admin_detail(settings, apartment, missing, publication)
+
+
+class GeocodeResultOut(Schema):
+    label: str
+    latitude: float
+    longitude: float
+    kind: str | None
+
+
+@router.get("/geocode", response_model=list[GeocodeResultOut])
+async def geocode(
+    settings: AppSettings,
+    q: Annotated[str, Query(min_length=2, max_length=200)],
+    lang: Language = Language.EN,
+) -> list[GeocodeResultOut]:
+    """Search addresses and landmarks inside the service area (admin location picker)."""
+    results = await geocoding.search(settings, q, lang.value)
+    return [GeocodeResultOut.model_validate(result) for result in results]
 
 
 @router.get("/dashboard", response_model=DashboardOut)

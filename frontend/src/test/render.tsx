@@ -3,6 +3,7 @@ import { render } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 
 import { AuthProvider } from '@/auth/AuthProvider';
+import { ToastProvider } from '@/components/ui/ToastProvider';
 import { routes } from '@/routes';
 
 export function renderApp(path = '/') {
@@ -13,7 +14,9 @@ export function renderApp(path = '/') {
   const result = render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>,
   );

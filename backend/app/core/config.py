@@ -63,6 +63,17 @@ class Settings(BaseSettings):
     s3_secret_access_key: SecretStr = SecretStr("")
     s3_auto_create_bucket: bool = False
 
+    # Listing photos
+    image_max_upload_mb: int = 10
+    image_max_per_listing: int = 15
+
+    # Geocoding for the admin location picker (Nominatim-compatible /search endpoint).
+    # The public Nominatim instance allows light use with an identifying User-Agent;
+    # point this at your own instance or a commercial provider for heavier use.
+    geocoding_url: str = "https://nominatim.openstreetmap.org/search"
+    geocoding_user_agent: str = "DaNangApartments/0.1"
+    geocoding_rate_limit: str = "1/second"
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, value: object) -> object:

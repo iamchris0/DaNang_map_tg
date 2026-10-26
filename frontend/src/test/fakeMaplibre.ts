@@ -32,6 +32,7 @@ export class FakeMap {
   }
   getBounds() {
     return {
+      contains: () => true,
       getWest: () => BOUNDS.west,
       getSouth: () => BOUNDS.south,
       getEast: () => BOUNDS.east,
@@ -61,14 +62,35 @@ export class FakeMap {
   }
 }
 
+export const markers: FakeMarker[] = [];
+
 export class FakeMarker {
   private readonly element: HTMLElement;
-  constructor({ element }: { element: HTMLElement }) {
-    this.element = element;
-    element.classList.add('maplibregl-marker');
+  readonly options: Record<string, unknown>;
+  private readonly handlers = new Map<string, Handler[]>();
+  lngLat: [number, number] = [0, 0];
+
+  constructor(options: { element?: HTMLElement } & Record<string, unknown> = {}) {
+    this.options = options;
+    this.element = options.element ?? document.createElement('div');
+    this.element.classList.add('maplibregl-marker');
+    markers.push(this);
   }
-  setLngLat() {
+  setLngLat(lngLat: [number, number]) {
+    this.lngLat = lngLat;
     return this;
+  }
+  getLngLat() {
+    return { lng: this.lngLat[0], lat: this.lngLat[1] };
+  }
+  on(event: string, handler: Handler) {
+    this.handlers.set(event, [...(this.handlers.get(event) ?? []), handler]);
+    return this;
+  }
+  /** Simulate dragging the marker to a new position. */
+  dragTo(lng: number, lat: number) {
+    this.lngLat = [lng, lat];
+    for (const handler of this.handlers.get('dragend') ?? []) handler({});
   }
   addTo(map: FakeMap) {
     map.getCanvasContainer().appendChild(this.element);

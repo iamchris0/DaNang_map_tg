@@ -22,6 +22,7 @@ export function ApartmentCard({ apartment }: { apartment: ApartmentCardData }) {
           image={apartment.cover_image}
           alt={apartment.title}
           className="aspect-[4/3] w-full"
+          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
         />
         <span className="absolute top-2 left-2 rounded-full bg-emerald-600 px-2 py-0.5 text-xs font-medium text-white">
           {t('apartment.available')}

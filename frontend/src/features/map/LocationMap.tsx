@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { LocationPrecision } from '@/api/types';
 import { PinIcon } from '@/components/ui/icons';
 
-import { MAP_STYLE_URL } from './config';
+import { collapseAttribution, MAP_STYLE_URL } from './config';
 import { HtmlMarker } from './HtmlMarker';
 import { hasWebGL } from './webgl';
 
@@ -42,12 +42,7 @@ export default function LocationMap({ latitude, longitude, precision }: Props) {
       return;
     }
     instance.on('load', () => {
-      // The compact attribution starts expanded and would cover this small map;
-      // collapse it (the ⓘ button still reveals it).
-      instance
-        .getContainer()
-        .querySelector('.maplibregl-ctrl-attrib')
-        ?.classList.remove('maplibregl-compact-show');
+      collapseAttribution(instance);
       setMap(instance);
     });
     return () => {

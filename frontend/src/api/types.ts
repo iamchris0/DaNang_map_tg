@@ -20,7 +20,10 @@ export interface District {
 
 export interface Image {
   id: string;
+  /** Large WebP (max 1600 px). */
   url: string;
+  /** Thumbnail WebP (max 480 px). */
+  thumb_url: string;
   width: number;
   height: number;
 }
@@ -88,4 +91,88 @@ export interface AuthResponse {
   expires_at: string;
   user: User;
   start_param: string | null;
+}
+
+// --- Admin ---------------------------------------------------------------------------------
+
+export type ApartmentStatus = 'draft' | 'available' | 'rented' | 'archived';
+export type PublicationStatus = 'pending' | 'succeeded' | 'failed' | 'unknown';
+
+export interface PublicationSummary {
+  status: PublicationStatus;
+  telegram_message_id: number | null;
+  published_at: string | null;
+  created_at: string;
+}
+
+export interface AdminApartment {
+  id: string;
+  status: ApartmentStatus;
+  title: string | null;
+  description: string | null;
+  price_vnd: number | null;
+  area_sqm: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  district: District | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  location_precision: LocationPrecision | null;
+  deposit_vnd: number | null;
+  minimum_rental_months: number | null;
+  rental_conditions: string | null;
+  agent_contact_type: ContactType | null;
+  agent_contact_value: string | null;
+  images: Image[];
+  created_at: string;
+  updated_at: string;
+  missing_fields: string[];
+  latest_publication: PublicationSummary | null;
+}
+
+/** Editable fields, as sent to POST/PATCH /api/admin/apartments. */
+export interface ApartmentInput {
+  title: string | null;
+  description: string | null;
+  price_vnd: number | null;
+  area_sqm: string | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  district_id: number | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  location_precision: LocationPrecision | null;
+  deposit_vnd: number | null;
+  minimum_rental_months: number | null;
+  rental_conditions: string | null;
+  agent_contact_type: ContactType | null;
+  agent_contact_value: string | null;
+}
+
+export interface AdminListItem {
+  id: string;
+  status: ApartmentStatus;
+  title: string | null;
+  price_vnd: number | null;
+  district: District | null;
+  cover_image: Image | null;
+  updated_at: string;
+  publication_status: PublicationStatus | null;
+}
+
+export interface Dashboard {
+  total: number;
+  available: number;
+  draft: number;
+  rented: number;
+  archived: number;
+}
+
+export interface GeocodeResult {
+  label: string;
+  latitude: number;
+  longitude: number;
+  kind: string | null;
 }

@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router';
 
 import { AuthProvider } from './auth/AuthProvider';
+import { ToastProvider } from './components/ui/ToastProvider';
 import { routes } from './routes';
 import { initTelegram } from './telegram/webapp';
 
@@ -24,7 +25,9 @@ createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

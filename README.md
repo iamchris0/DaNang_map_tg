@@ -3,10 +3,11 @@
 A Telegram Mini App for browsing and managing long-term rental apartments in Da Nang:
 a map-based catalog for users and a mobile-friendly admin panel for channel administrators.
 
-> **Status: Phase 3 (Public frontend) of 6.** Users can browse listings on a map with
-> clustered price markers or in a list, filter them, open details, contact the agent or
-> administrator, and share deep links, in English or Russian, inside Telegram or in a
-> browser. Next: the admin panel (Phase 4) and channel publishing (Phase 5). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+> **Status: Phase 4 (Admin panel) of 6.** Users browse listings on a map or list, filter,
+> open details, contact the agent or administrator and share deep links (EN/RU, Telegram or
+> browser). Administrators manage the catalog from their phone: dashboard, create/edit
+> forms, address search and map pin, photo upload and ordering, status changes. Next:
+> Telegram channel publishing (Phase 5), then production deployment (Phase 6). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ## Branches
 
@@ -118,6 +119,10 @@ Interactive docs: http://localhost:8000/api/docs. All errors use one envelope:
 | `POST /api/admin/apartments` | admin | Create a draft (any subset of fields) |
 | `GET/PATCH/DELETE /api/admin/apartments/{id}` | admin | Read / partial update / soft delete |
 | `PATCH /api/admin/apartments/{id}/status` | admin | Lifecycle transition (validated) |
+| `POST /api/admin/apartments/{id}/images` | admin | Upload one photo (multipart `file`) |
+| `PATCH /api/admin/apartments/{id}/images/order` | admin | New order (`image_ids`); first = cover |
+| `DELETE /api/admin/apartments/{id}/images/{image_id}` | admin | Remove a photo |
+| `GET /api/admin/geocode?q=&lang=` | admin | Address/landmark search inside the service area |
 
 Catalog filters: `min_price`, `max_price` (VND), repeated `bedrooms` (`0` = studio,
 `3` = 3+), repeated `district` (ids), `min_area`, `max_area` (m²), and
@@ -130,7 +135,7 @@ curl -s -X POST localhost:8000/api/auth/dev -H 'Content-Type: application/json' 
   -d '{"telegram_user_id": 1001}'
 ```
 
-Image upload and Telegram publishing endpoints arrive in Phases 4 and 5.
+Telegram channel publishing endpoints arrive in Phase 5.
 
 ## Frontend (Phase 3)
 
@@ -170,6 +175,36 @@ frontend/src/
 3. Set the Mini App URL in @BotFather to the tunnel URL and open it from the bot.
 
 Phase 6 adds the production HTTPS setup.
+
+## Admin panel (Phase 4)
+
+Open `/admin` (or the ⚙ button in the catalog header, shown to administrators only).
+
+- **Access:** inside Telegram the user is signed in automatically; admin rights come from
+  `ADMIN_TELEGRAM_USER_IDS` and are enforced by the API on every request. In a local
+  browser, development builds offer a *Developer sign-in* (needs `DEV_AUTH_ENABLED=true`
+  and your ID in `ADMIN_TELEGRAM_USER_IDS`). Production builds don't contain it.
+- **Dashboard:** counts per status (tap to filter), search by title, listing cards with
+  cover, rent, district, status, channel-post state and quick status actions.
+- **Form** (`/admin/apartments/new`, `/admin/apartments/:id`): every field optional for a
+  draft. The status panel lists what is still missing before publishing. Leaving with
+  unsaved changes asks first (in-app navigation, browser reload, closing the Mini App).
+- **Location:** search an address or landmark (server-side proxy to a Nominatim-compatible
+  geocoder), tap the map to place the pin, drag to adjust, and choose *exact* or
+  *approximate*. A searched place is always set to *approximate* until you confirm it.
+- **Photos** (after the first save): JPEG/PNG/WebP, up to 10 MB each and 15 per listing,
+  with upload progress, ← → reordering, ★ to make a photo the cover, and removal. The
+  server checks the real file contents, applies EXIF rotation, strips metadata (including
+  GPS) and stores two WebP sizes (1600 px and 480 px) in S3.
+
+### Image storage in production
+
+Objects are written as `apartments/<listing>/<image>/{lg,sm}.webp` with
+`Cache-Control: public, max-age=31536000, immutable`. Browsers load them directly, so the
+bucket (or a CDN in front of it) must allow public **read** of objects, and
+`S3_PUBLIC_BASE_URL` must point at that public URL. Development does this automatically
+(`S3_AUTO_CREATE_BUCKET=true` creates the bucket with a public-read policy). Allow request
+bodies of at least 11 MB on the reverse proxy for uploads.
 
 ## Running without Docker
 
@@ -234,7 +269,8 @@ All configuration is environment-based; see [.env.example](.env.example) for eve
 | Dev login | `DEV_AUTH_ENABLED` | Browser-only development bypass. The app refuses to start with it enabled in production. |
 | Rate limits | `RATE_LIMIT_AUTH`, `RATE_LIMIT_ADMIN_WRITE` | Per IP for login, per admin for writes. |
 | Service area | `SERVICE_AREA_BBOX` | Listing coordinates must fall inside this box. |
-| Image storage | `S3_*` | Any S3-compatible provider. `S3_AUTO_CREATE_BUCKET` must be `false` in production. |
+| Image storage | `S3_*`, `IMAGE_MAX_UPLOAD_MB`, `IMAGE_MAX_PER_LISTING` | Any S3-compatible provider with public object reads (see *Image storage in production*). `S3_AUTO_CREATE_BUCKET` must be `false` in production. |
+| Address search | `GEOCODING_URL`, `GEOCODING_USER_AGENT`, `GEOCODING_RATE_LIMIT` | Nominatim-compatible endpoint; results are limited to `SERVICE_AREA_BBOX` and cached for a day. |
 | Map | `VITE_MAP_STYLE_URL` | MapLibre style JSON. Default OpenFreeMap (no key). For production traffic use a self-hosted style or a commercial provider; public OSM tile servers are never used. Geocoding for the admin location picker arrives in Phase 4. |
 
 Production safety checks run at startup when `ENVIRONMENT=production`.
