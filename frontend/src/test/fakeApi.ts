@@ -6,6 +6,8 @@ interface FakeApiOptions {
   apartments?: ApartmentDetail[];
   /** Per-id error responses for the detail endpoint, e.g. { id: [410, 'listing_unavailable'] }. */
   detailErrors?: Record<string, [number, string]>;
+  /** Language saved in the signed-in user's profile (e.g. picked in the bot). */
+  preferredLanguage?: 'en' | 'ru' | 'vi' | null;
 }
 
 function json(body: unknown, status = 200): Response {
@@ -36,6 +38,7 @@ function matches(apartment: ApartmentDetail, params: URLSearchParams): boolean {
 export function installFakeApi({
   apartments = ALL_APARTMENTS,
   detailErrors = {},
+  preferredLanguage = null,
 }: FakeApiOptions = {}) {
   const requests: { method: string; url: URL; body: unknown; headers: Headers }[] = [];
 
@@ -98,7 +101,7 @@ export function installFakeApi({
             telegram_user_id: 42,
             username: 'tester',
             display_name: 'Tester',
-            preferred_language: null,
+            preferred_language: preferredLanguage,
             is_admin: false,
             role: 'user',
           },

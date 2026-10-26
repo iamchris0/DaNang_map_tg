@@ -25,11 +25,6 @@ export function getInitData(): string | null {
   return getWebApp()?.initData ?? null;
 }
 
-/** UI-only hint for the initial language; not used for any authorization. */
-export function getLanguageHint(): string | null {
-  return getWebApp()?.initDataUnsafe.user?.language_code ?? null;
-}
-
 /**
  * Listing id from a deep link: t.me/<bot>/<app>?startapp=<id> inside Telegram, or the
  * equivalent tgWebAppStartParam query parameter in a browser.

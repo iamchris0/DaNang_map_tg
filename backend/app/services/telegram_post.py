@@ -40,6 +40,18 @@ _TEMPLATES: dict[Language, dict[str, str]] = {
         "minimum_one": "Минимальный срок: 1 мес.",
         "link": "📲 Подробнее и расположение",
     },
+    Language.VI: {
+        "rent": "💰 Giá thuê: {price} VND/tháng",
+        "district": "📍 Quận: {district}",
+        "area": "📐 Diện tích: {area} m²",
+        "bedrooms": "🛏 Phòng ngủ: {bedrooms}",
+        "studio": "Studio",
+        "bathrooms": "🛁 Phòng tắm: {bathrooms}",
+        "deposit": "Đặt cọc: {deposit} VND",
+        "minimum": "Thời gian thuê tối thiểu: {months} tháng",
+        "minimum_one": "Thời gian thuê tối thiểu: 1 tháng",
+        "link": "📲 Xem chi tiết và vị trí",
+    },
 }
 
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -52,7 +64,8 @@ def visible_length(markup: str) -> int:
 
 def _money(value: int, language: Language) -> str:
     grouped = f"{value:,}"
-    return grouped.replace(",", " ") if language is Language.RU else grouped
+    separators = {Language.RU: " ", Language.VI: "."}
+    return grouped.replace(",", separators.get(language, ","))
 
 
 def _area(value: Decimal) -> str:

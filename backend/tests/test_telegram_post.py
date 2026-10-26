@@ -75,6 +75,14 @@ def test_english_post_matches_the_spec_format() -> None:
     assert post.length == visible_length(post.html)
 
 
+def test_vietnamese_post() -> None:
+    post = build_post(_settings(telegram_post_language="vi"), _apartment(), with_media=True)
+    assert "💰 Giá thuê: 12.000.000 VND/tháng" in post.html
+    assert "📍 Quận: Sơn Trà" in post.html
+    assert "Thời gian thuê tối thiểu: 6 tháng" in post.html
+    assert post.html.endswith("Xem chi tiết và vị trí</a>")
+
+
 def test_russian_post_and_optional_fields() -> None:
     post = build_post(
         _settings(telegram_post_language="ru"),
@@ -191,7 +199,7 @@ def test_error_classification(error: Exception, status: PublicationStatus, code:
 
 def test_bot_start_opens_the_mini_app() -> None:
     settings = _settings(public_app_url="https://app.example")
-    text, keyboard = start_reply(settings, "ru-RU", None)
+    text, keyboard = start_reply(settings, Language.RU, None)
     assert text.startswith("Долгосрочная аренда")
     assert keyboard is not None
     button = keyboard.inline_keyboard[0][0]
@@ -199,7 +207,7 @@ def test_bot_start_opens_the_mini_app() -> None:
     assert button.web_app is not None and button.web_app.url == "https://app.example/"
 
     def opened_url(payload: str) -> str:
-        _, markup = start_reply(settings, "en", payload)
+        _, markup = start_reply(settings, Language.EN, payload)
         assert markup is not None
         web_app = markup.inline_keyboard[0][0].web_app
         assert web_app is not None
@@ -210,7 +218,9 @@ def test_bot_start_opens_the_mini_app() -> None:
 
 
 def test_bot_needs_https_for_mini_app_buttons() -> None:
-    text, keyboard = start_reply(_settings(public_app_url="http://localhost:5173"), "en", None)
+    text, keyboard = start_reply(
+        _settings(public_app_url="http://localhost:5173"), Language.EN, None
+    )
     assert keyboard is None
     assert "not available" in text
 

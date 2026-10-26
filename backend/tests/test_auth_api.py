@@ -39,7 +39,8 @@ async def test_login_creates_regular_user(api: AsyncClient, db: AsyncSession) ->
         "telegram_user_id": USER_TG_ID,
         "username": f"user{USER_TG_ID}",
         "display_name": "Test",
-        "preferred_language": "ru",
+        # The Telegram app language is not a choice: English until the user picks one.
+        "preferred_language": None,
         "is_admin": False,
         "role": "user",
     }
@@ -53,7 +54,9 @@ async def test_login_marks_configured_admin(api: AsyncClient) -> None:
 
 
 async def test_relogin_updates_profile_keeps_language(api: AsyncClient, db: AsyncSession) -> None:
-    await _login(api, sign_init_data(TEST_BOT_TOKEN, _tg_user(USER_TG_ID, language_code="ru")))
+    first = await _login(api, sign_init_data(TEST_BOT_TOKEN, _tg_user(USER_TG_ID)))
+    headers = {"Authorization": f"Bearer {first['access_token']}"}
+    await api.patch("/api/auth/me", json={"preferred_language": "ru"}, headers=headers)
     body = await _login(
         api,
         sign_init_data(
@@ -120,7 +123,8 @@ async def test_me_and_language_update(
     await db.refresh(user)
     assert user.preferred_language is Language.RU
 
-    invalid = await api.patch("/api/auth/me", json={"preferred_language": "vi"}, headers=headers)
+    assert user.language_selected_at is not None  # the bot won't ask again
+    invalid = await api.patch("/api/auth/me", json={"preferred_language": "de"}, headers=headers)
     assert invalid.status_code == 422
 
 

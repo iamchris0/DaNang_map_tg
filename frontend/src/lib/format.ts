@@ -1,6 +1,7 @@
-const locale = (language: string): string => (language === 'ru' ? 'ru-RU' : 'en-US');
+const LOCALES: Record<string, string> = { en: 'en-US', ru: 'ru-RU', vi: 'vi-VN' };
+const locale = (language: string): string => LOCALES[language] ?? 'en-US';
 
-/** Map label style: "8.5M ₫" (en) / "8,5 млн ₫" (ru). */
+/** Map label style: "8.5M ₫" (en) / "8,5 млн ₫" (ru) / "8,5 Tr ₫" (vi). */
 export function formatPriceCompact(vnd: number, language: string): string {
   const value = new Intl.NumberFormat(locale(language), {
     notation: 'compact',

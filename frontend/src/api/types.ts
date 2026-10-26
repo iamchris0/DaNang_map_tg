@@ -2,7 +2,7 @@
 
 export type LocationPrecision = 'exact' | 'approximate';
 export type ContactType = 'telegram_username' | 'telegram_link' | 'phone';
-export type Language = 'en' | 'ru';
+export type Language = 'en' | 'ru' | 'vi';
 
 export interface Page<T> {
   items: T[];

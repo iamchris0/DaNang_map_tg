@@ -18,7 +18,7 @@ from app.schemas.auth import (
     UserOut,
     UserPreferencesUpdate,
 )
-from app.services.users import effective_role, is_admin, upsert_telegram_user
+from app.services.users import effective_role, is_admin, set_language, upsert_telegram_user
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,6 @@ async def me(user: CurrentUser, settings: AppSettings) -> UserOut:
 async def update_me(
     body: UserPreferencesUpdate, user: CurrentUser, db: DbSession, settings: AppSettings
 ) -> UserOut:
-    user.preferred_language = body.preferred_language
-    await db.commit()
+    await set_language(db, user, body.preferred_language)
     await db.refresh(user)
     return _user_out(settings, user)

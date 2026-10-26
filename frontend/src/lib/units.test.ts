@@ -49,11 +49,11 @@ describe('filter URL state', () => {
 });
 
 describe('initial language', () => {
-  it('prefers a stored choice, then the Telegram language, then English', () => {
-    expect(resolveInitialLanguage('ru')).toBe('ru');
-    expect(resolveInitialLanguage('vi')).toBe('en');
-    expect(resolveInitialLanguage(null)).toBe('en');
-    localStorage.setItem('dna.language', 'en');
-    expect(resolveInitialLanguage('ru')).toBe('en');
+  it('uses the choice stored on this device, otherwise English', () => {
+    expect(resolveInitialLanguage()).toBe('en');
+    localStorage.setItem('dna.language', 'vi');
+    expect(resolveInitialLanguage()).toBe('vi');
+    localStorage.setItem('dna.language', 'de');
+    expect(resolveInitialLanguage()).toBe('en');
   });
 });

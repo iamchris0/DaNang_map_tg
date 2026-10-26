@@ -1,16 +1,19 @@
 """Bot conversation.
 
-- /start: the first time, a welcome with a role choice (tenant or landlord); afterwards a
-  button that opens the Mini App (optionally on a specific listing from a deep link).
+- /start: the first time, a language question (English, Russian, Vietnamese), then a role
+  choice (tenant or landlord); afterwards a button that opens the Mini App (optionally on a
+  specific listing from a deep link). Messages use the chosen language; English until then.
 - Landlord: Telegram's contact button asks the user to share their phone number; sharing
   their own contact makes them a landlord, who manages their own listings in the Mini App.
 - /role: shows the current role and offers to change it.
+- /language: changes the language (shared with the Mini App through the user profile).
 
 The conversation logic lives in `*_flow` functions that return the replies to send, so it
 can be tested without Telegram.
 """
 
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
 from aiogram import F, Router
@@ -36,6 +39,10 @@ from app.services import users
 
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 ROLE_CALLBACK = "role"
+LANGUAGE_CALLBACK = "lang"
+# Where a language button was shown: the first /start (continue to the role question) or
+# /language (just confirm).
+FROM_START, FROM_COMMAND = "start", "set"
 TENANT, LANDLORD = "tenant", "landlord"
 
 TEXTS = {
@@ -72,6 +79,8 @@ TEXTS = {
         "switch back with /role to manage them.",
         "cmd_start": "Open the apartments app",
         "cmd_role": "Your role and how to change it",
+        "cmd_language": "Change the language",
+        "language_set": "✅ Language: {language}.",
     },
     Language.RU: {
         "greeting": "Долгосрочная аренда квартир в Дананге на карте: фильтры по цене, "
@@ -106,7 +115,53 @@ TEXTS = {
         "вернуть роль можно через /role.",
         "cmd_start": "Открыть приложение с квартирами",
         "cmd_role": "Ваша роль и как её изменить",
+        "cmd_language": "Сменить язык",
+        "language_set": "✅ Язык: {language}.",
     },
+    Language.VI: {
+        "greeting": "Thuê căn hộ dài hạn tại Đà Nẵng trên bản đồ: lọc theo giá, số phòng ngủ "
+        "và quận, xem ảnh và liên hệ môi giới.",
+        "open": "🏠 Xem căn hộ",
+        "open_listing": "🏠 Mở căn hộ này",
+        "menu": "Căn hộ",
+        "no_https": "Ứng dụng hiện chưa sẵn sàng. Vui lòng thử lại sau.",
+        "welcome": "👋 Chào mừng bạn đến với Da Nang Apartments!\n\nThuê căn hộ dài hạn tại "
+        "Đà Nẵng trên bản đồ. Bạn là:",
+        "choose_tenant": "🔍 Tôi đang tìm nhà",
+        "choose_landlord": "🔑 Tôi là chủ nhà",
+        "tenant_done": "Tuyệt vời! Xem căn hộ trên bản đồ, lọc và liên hệ môi giới.",
+        "share_request": "Để đăng căn hộ, vui lòng chia sẻ số liên lạc của bạn. Nhấn nút bên "
+        "dưới, Telegram sẽ yêu cầu bạn xác nhận.",
+        "share_button": "📱 Chia sẻ số liên lạc",
+        "cancel": "Hủy",
+        "cancelled": "Được rồi, vai trò của bạn không thay đổi.",
+        "not_own_contact": "Vui lòng chia sẻ số liên lạc của chính bạn bằng nút bên dưới.",
+        "landlord_done": "✅ Bạn đã là chủ nhà.\n\nMở ứng dụng và nhấn ⚙️ ở góc trên bên phải "
+        "để thêm căn hộ. Bạn sẽ chỉ thấy tin đăng của mình.",
+        "role_current": "Vai trò của bạn: {role}.",
+        "role_tenant": "người thuê",
+        "role_landlord": "chủ nhà",
+        "role_admin": "quản trị viên",
+        "about_tenant": "Bạn thấy tất cả căn hộ còn trống.",
+        "about_landlord": "Bạn quản lý tin đăng của mình và chỉ thấy chúng trong ứng dụng.",
+        "about_admin": "Bạn quản lý tất cả tin đăng. Điều này được thiết lập trong cấu hình "
+        "máy chủ.",
+        "switch_to_landlord": "🔑 Trở thành chủ nhà",
+        "switch_to_tenant": "🔍 Chuyển sang người thuê",
+        "tenant_switched": "Bạn đã là người thuê. Tin đăng của bạn vẫn giữ nguyên; dùng /role "
+        "để quay lại quản lý chúng.",
+        "cmd_start": "Mở ứng dụng căn hộ",
+        "cmd_role": "Vai trò của bạn và cách thay đổi",
+        "cmd_language": "Đổi ngôn ngữ",
+        "language_set": "✅ Ngôn ngữ: {language}.",
+    },
+}
+# Asked before anything else, so it is written in all three languages.
+LANGUAGE_QUESTION = "🌐 Choose your language\nВыберите язык\nChọn ngôn ngữ"
+LANGUAGE_NAMES = {
+    Language.EN: "🇬🇧 English",
+    Language.RU: "🇷🇺 Русский",
+    Language.VI: "🇻🇳 Tiếng Việt",
 }
 CANCEL_TEXTS = frozenset(texts["cancel"] for texts in TEXTS.values())
 
@@ -119,8 +174,12 @@ class Reply:
     markup: Markup | None = None
 
 
-def language_for(code: str | None) -> Language:
-    return Language.RU if (code or "").lower().startswith("ru") else Language.EN
+ChoiceFlow = Callable[[AsyncSession, Settings, TelegramUser, str], Awaitable[list[Reply]]]
+
+
+def user_language(user: User) -> Language:
+    """The language the user picked; English until they do."""
+    return user.preferred_language or Language.EN
 
 
 def mini_app_url(settings: Settings, listing_id: str | None = None) -> str | None:
@@ -149,10 +208,9 @@ def _open_keyboard(
 
 
 def start_reply(
-    settings: Settings, language_code: str | None, payload: str | None
+    settings: Settings, language: Language, payload: str | None
 ) -> tuple[str, InlineKeyboardMarkup | None]:
     """The usual /start answer: a button that opens the Mini App."""
-    language = language_for(language_code)
     keyboard = _open_keyboard(settings, language, _listing_id(payload))
     if keyboard is None:
         return TEXTS[language]["no_https"], None
@@ -194,12 +252,24 @@ def _tg_user(user: TelegramUser) -> TelegramWebAppUser:
     )
 
 
-async def start_flow(
-    session: AsyncSession, settings: Settings, tg_user: TelegramUser, payload: str | None
-) -> list[Reply]:
-    user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
-    language = language_for(tg_user.language_code)
-    listing_id = _listing_id(payload)
+def _language_question(origin: str, listing_id: str | None = None) -> Reply:
+    buttons = [
+        [
+            InlineKeyboardButton(
+                text=name,
+                callback_data=":".join(
+                    part for part in (LANGUAGE_CALLBACK, origin, language.value, listing_id) if part
+                ),
+            )
+        ]
+        for language, name in LANGUAGE_NAMES.items()
+    ]
+    return Reply(LANGUAGE_QUESTION, InlineKeyboardMarkup(inline_keyboard=buttons))
+
+
+def _welcome(settings: Settings, user: User, listing_id: str | None) -> Reply:
+    """After the language: the role question the first time, else the usual greeting."""
+    language = user_language(user)
     if user.role_selected_at is None and not users.is_super_admin(settings, user):
         choice = InlineKeyboardMarkup(
             inline_keyboard=[
@@ -207,9 +277,40 @@ async def start_flow(
                 [_role_button(language, LANDLORD, listing_id)],
             ]
         )
-        return [Reply(TEXTS[language]["welcome"], choice)]
-    text, keyboard = start_reply(settings, tg_user.language_code, payload)
-    return [Reply(text, keyboard)]
+        return Reply(TEXTS[language]["welcome"], choice)
+    text, keyboard = start_reply(settings, language, listing_id)
+    return Reply(text, keyboard)
+
+
+async def start_flow(
+    session: AsyncSession, settings: Settings, tg_user: TelegramUser, payload: str | None
+) -> list[Reply]:
+    user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
+    listing_id = _listing_id(payload)
+    if user.language_selected_at is None:
+        return [_language_question(FROM_START, listing_id)]
+    return [_welcome(settings, user, listing_id)]
+
+
+async def language_flow(
+    session: AsyncSession, settings: Settings, tg_user: TelegramUser
+) -> list[Reply]:
+    await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
+    return [_language_question(FROM_COMMAND)]
+
+
+async def choose_language_flow(
+    session: AsyncSession, settings: Settings, tg_user: TelegramUser, data: str
+) -> list[Reply]:
+    """A language button was pressed (from the first /start or /language)."""
+    _, origin, code, *rest = data.split(":")
+    language = Language(code) if code in Language._value2member_map_ else Language.EN
+    user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
+    await users.set_language(session, user, language)
+    if origin == FROM_START:
+        return [_welcome(settings, user, _listing_id(rest[0] if rest else None))]
+    confirmation = TEXTS[language]["language_set"].format(language=LANGUAGE_NAMES[language])
+    return [_open_reply(settings, language, confirmation, None)]
 
 
 async def choose_role_flow(
@@ -218,9 +319,9 @@ async def choose_role_flow(
     """A role button was pressed (from /start or /role)."""
     _, role, *rest = data.split(":")
     listing_id = _listing_id(rest[0] if rest else None)
-    language = language_for(tg_user.language_code)
-    texts = TEXTS[language]
     user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
+    language = user_language(user)
+    texts = TEXTS[language]
 
     if role == LANDLORD:
         if user.role is UserRole.LANDLORD or users.is_super_admin(settings, user):
@@ -245,12 +346,12 @@ async def contact_flow(
     phone_number: str,
 ) -> list[Reply]:
     """The user shared a contact through the keyboard button."""
-    language = language_for(tg_user.language_code)
+    user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
+    language = user_language(user)
     texts = TEXTS[language]
     # Only the user's own contact counts (a forwarded or picked contact is someone else's).
     if contact_user_id != tg_user.id:
         return [Reply(texts["not_own_contact"], _share_contact_keyboard(language))]
-    user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
     await users.become_landlord(session, settings, user, phone_number)
     return [
         Reply(texts["landlord_done"], ReplyKeyboardRemove()),
@@ -264,8 +365,11 @@ def _open_buttons(settings: Settings, language: Language) -> list[Reply]:
     return [Reply(TEXTS[language]["open"], keyboard)] if keyboard else []
 
 
-def cancel_flow(tg_user: TelegramUser) -> list[Reply]:
-    return [Reply(TEXTS[language_for(tg_user.language_code)]["cancelled"], ReplyKeyboardRemove())]
+async def cancel_flow(
+    session: AsyncSession, settings: Settings, tg_user: TelegramUser
+) -> list[Reply]:
+    user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
+    return [Reply(TEXTS[user_language(user)]["cancelled"], ReplyKeyboardRemove())]
 
 
 def describe_role(settings: Settings, user: User, language: Language) -> Reply:
@@ -287,7 +391,7 @@ async def role_flow(
     session: AsyncSession, settings: Settings, tg_user: TelegramUser
 ) -> list[Reply]:
     user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
-    return [describe_role(settings, user, language_for(tg_user.language_code))]
+    return [describe_role(settings, user, user_language(user))]
 
 
 async def _send(message: Message, replies: list[Reply]) -> None:
@@ -314,18 +418,32 @@ def build_router(settings: Settings, sessions: async_sessionmaker[AsyncSession])
             replies = await role_flow(session, settings, message.from_user)
         await _send(message, replies)
 
-    @router.callback_query(F.data.startswith(f"{ROLE_CALLBACK}:"))
-    async def on_role_chosen(callback: CallbackQuery) -> None:
+    @router.message(Command("language"))
+    async def on_language(message: Message) -> None:
+        if message.from_user is None:
+            return
+        async with sessions() as session:
+            replies = await language_flow(session, settings, message.from_user)
+        await _send(message, replies)
+
+    async def answer_choice(callback: CallbackQuery, flow: ChoiceFlow) -> None:
         await callback.answer()
         message = callback.message
         if not isinstance(message, Message) or callback.data is None:
             return
         async with sessions() as session:
-            replies = await choose_role_flow(session, settings, callback.from_user, callback.data)
+            replies = await flow(session, settings, callback.from_user, callback.data)
         # The choice is made: remove the buttons so it can't be pressed twice.
         await message.edit_reply_markup(reply_markup=None)
-        for reply in replies:
-            await message.answer(reply.text, reply_markup=reply.markup)
+        await _send(message, replies)
+
+    @router.callback_query(F.data.startswith(f"{ROLE_CALLBACK}:"))
+    async def on_role_chosen(callback: CallbackQuery) -> None:
+        await answer_choice(callback, choose_role_flow)
+
+    @router.callback_query(F.data.startswith(f"{LANGUAGE_CALLBACK}:"))
+    async def on_language_chosen(callback: CallbackQuery) -> None:
+        await answer_choice(callback, choose_language_flow)
 
     @router.message(F.contact)
     async def on_contact(message: Message) -> None:
@@ -340,7 +458,10 @@ def build_router(settings: Settings, sessions: async_sessionmaker[AsyncSession])
 
     @router.message(F.text.in_(CANCEL_TEXTS))
     async def on_cancel(message: Message) -> None:
-        if message.from_user is not None:
-            await _send(message, cancel_flow(message.from_user))
+        if message.from_user is None:
+            return
+        async with sessions() as session:
+            replies = await cancel_flow(session, settings, message.from_user)
+        await _send(message, replies)
 
     return router

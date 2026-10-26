@@ -12,6 +12,7 @@ class UserRole(StrEnum):
 class Language(StrEnum):
     EN = "en"
     RU = "ru"
+    VI = "vi"
 
 
 class ApartmentStatus(StrEnum):

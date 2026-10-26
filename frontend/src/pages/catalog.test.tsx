@@ -41,6 +41,17 @@ describe('map view', () => {
     expect(catalog.every((r) => r.headers.get('Authorization')?.startsWith('Bearer '))).toBe(true);
   });
 
+  it('uses the language saved in the profile, e.g. picked in the bot', async () => {
+    installFakeApi({ preferredLanguage: 'vi' });
+    installTelegram();
+    renderApp('/');
+    expect(await screen.findByText('3 căn hộ trong khu vực này')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tiếng Việt' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
   it('opens a preview sheet for the selected marker and then the details page', async () => {
     installFakeApi();
     const user = userEvent.setup();

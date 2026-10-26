@@ -31,11 +31,6 @@ def effective_role(settings: Settings, user: User) -> UserRole:
     return UserRole.LANDLORD if user.role is UserRole.LANDLORD else UserRole.USER
 
 
-def _language_from_code(code: str | None) -> Language | None:
-    base = (code or "").lower().split("-")[0]
-    return Language(base) if base in Language._value2member_map_ else None
-
-
 async def upsert_telegram_user(
     session: AsyncSession, settings: Settings, tg_user: TelegramWebAppUser
 ) -> User:
@@ -44,10 +39,8 @@ async def upsert_telegram_user(
         select(User).where(User.telegram_user_id == tg_user.id).with_for_update()
     )
     if user is None:
-        user = User(
-            telegram_user_id=tg_user.id,
-            preferred_language=_language_from_code(tg_user.language_code),
-        )
+        # No language yet: English until the user picks one (bot or app).
+        user = User(telegram_user_id=tg_user.id)
         session.add(user)
     user.username = tg_user.username
     user.display_name = tg_user.display_name or None
@@ -56,6 +49,14 @@ async def upsert_telegram_user(
         user.role = effective_role(settings, user)
     await session.commit()
     await session.refresh(user)
+    return user
+
+
+async def set_language(session: AsyncSession, user: User, language: Language) -> User:
+    """An explicit choice, shared by the bot and the app."""
+    user.preferred_language = language
+    user.language_selected_at = datetime.now(UTC)
+    await session.commit()
     return user
 
 

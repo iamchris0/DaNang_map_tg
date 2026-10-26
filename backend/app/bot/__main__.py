@@ -40,13 +40,14 @@ async def main() -> None:
     else:
         logger.warning("PUBLIC_APP_URL is not HTTPS; Mini App buttons are disabled")
 
-    # Command menu, in Russian for Russian-language clients.
+    # Command menu, translated for Russian- and Vietnamese-language clients.
     for language in Language:
         texts = TEXTS[language]
         await bot.set_my_commands(
             [
                 BotCommand(command="start", description=texts["cmd_start"]),
                 BotCommand(command="role", description=texts["cmd_role"]),
+                BotCommand(command="language", description=texts["cmd_language"]),
             ],
             language_code=None if language is Language.EN else language.value,
         )

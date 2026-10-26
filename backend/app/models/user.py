@@ -25,3 +25,5 @@ class User(TimestampMixin, Base):
     # Shared through Telegram's contact button when becoming a landlord.
     phone_number: Mapped[str | None] = mapped_column(String(32))
     preferred_language: Mapped[Language | None] = mapped_column(str_enum(Language, "language"))
+    # When the user picked a language (bot or app); None: the bot asks on /start.
+    language_selected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

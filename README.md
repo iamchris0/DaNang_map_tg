@@ -4,7 +4,7 @@ A Telegram Mini App for browsing and managing long-term rental apartments in Da 
 a map-based catalog for users and a mobile-friendly admin panel for channel administrators.
 
 > **Status: MVP complete (Phases 1–6).** Map- and list-based catalog with filters, details,
-> contacts and deep links (EN/RU, Telegram or browser); a phone-friendly admin panel with
+> contacts and deep links (English, Russian, Vietnamese; Telegram or browser); a phone-friendly admin panel with
 > photo upload and location picking; duplicate-safe publishing to the Telegram channel; a
 > production stack with automatic HTTPS. Deploy: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 > Acceptance status: [docs/ACCEPTANCE.md](docs/ACCEPTANCE.md).
@@ -199,7 +199,11 @@ Open `/admin` (or the ⚙ button in the catalog header, shown to administrators 
 
   In a local browser, development builds offer a *Developer sign-in* on `localhost` (needs
   `DEV_AUTH_ENABLED=true`). Production builds don't contain it.
-- **Roles (bot):** on the first `/start` the bot asks *tenant* or *landlord*. Landlord shows
+- **Language:** English, Russian or Vietnamese; English until the user picks one. The first
+  `/start` asks for it, `/language` changes it, and the app's EN/RU/VI switcher does the same.
+  The choice is saved in the user's profile, so the bot and the app always match. (Telegram
+  does not tell bots a user's country or location, only their app language.)
+- **Roles (bot):** after the language, the first `/start` asks *tenant* or *landlord*. Landlord shows
   Telegram's contact button; sharing your **own** contact (Telegram asks to confirm) makes you
   a landlord. `/role` shows the current role and switches it. Tenants (and anyone not signed
   in) see every available listing.
@@ -233,7 +237,7 @@ listing, reviews the preview and confirms.
 
 - **The post:** title, rent, district, area, bedrooms, bathrooms, description, deposit,
   minimum rental and a link that opens the listing in the Mini App, in
-  `TELEGRAM_POST_LANGUAGE` (en/ru). Up to 10 photos are sent as an album (first photo
+  `TELEGRAM_POST_LANGUAGE` (en/ru/vi). Up to 10 photos are sent as an album (first photo
   carries the caption). The description is shortened with "…" to fit Telegram's
   1024-character caption limit; user text is HTML-escaped.
 - **No duplicates:** each confirmation carries an `Idempotency-Key`. Retrying the same

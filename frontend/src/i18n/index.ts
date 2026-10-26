@@ -1,12 +1,11 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import { getLanguageHint } from '@/telegram/webapp';
-
 import en from './locales/en.json';
 import ru from './locales/ru.json';
+import vi from './locales/vi.json';
 
-export const SUPPORTED_LANGUAGES = ['en', 'ru'] as const;
+export const SUPPORTED_LANGUAGES = ['en', 'ru', 'vi'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 
 const STORAGE_KEY = 'dna.language';
@@ -24,16 +23,12 @@ function readStoredLanguage(): Language | null {
   }
 }
 
-export function hasStoredLanguage(): boolean {
-  return readStoredLanguage() !== null;
-}
-
-/** Resolution order: manual choice (localStorage) → Telegram user language → English. */
-export function resolveInitialLanguage(hint?: string | null): Language {
-  const stored = readStoredLanguage();
-  if (stored) return stored;
-  const base = hint?.toLowerCase().split('-')[0];
-  return isSupportedLanguage(base) ? base : 'en';
+/**
+ * A choice made on this device, otherwise English. After sign-in the language saved in the
+ * user's profile (picked here or in the bot with /language) takes over.
+ */
+export function resolveInitialLanguage(): Language {
+  return readStoredLanguage() ?? 'en';
 }
 
 export async function changeLanguage(language: Language): Promise<void> {
@@ -46,8 +41,8 @@ export async function changeLanguage(language: Language): Promise<void> {
 }
 
 void i18n.use(initReactI18next).init({
-  resources: { en: { translation: en }, ru: { translation: ru } },
-  lng: resolveInitialLanguage(getLanguageHint()),
+  resources: { en: { translation: en }, ru: { translation: ru }, vi: { translation: vi } },
+  lng: resolveInitialLanguage(),
   fallbackLng: 'en',
   supportedLngs: SUPPORTED_LANGUAGES,
   interpolation: { escapeValue: false },

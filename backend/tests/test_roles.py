@@ -8,14 +8,17 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.handlers import (
+    LANGUAGE_QUESTION,
+    choose_language_flow,
     choose_role_flow,
     contact_flow,
+    language_flow,
     role_flow,
     start_flow,
 )
 from app.core.config import Settings
 from app.models import Apartment, User
-from app.models.enums import ApartmentStatus, UserRole
+from app.models.enums import ApartmentStatus, Language, UserRole
 from tests.conftest import ADMIN_TG_ID, TEST_BOT_TOKEN, USER_TG_ID, requires_db
 from tests.factories import auth_headers, make_apartment, make_user, sign_init_data
 
@@ -29,6 +32,14 @@ LISTING_ID = "11111111-1111-4111-8111-111111111111"
 
 def _tg(user_id: int, language: str = "en") -> TelegramUser:
     return TelegramUser(id=user_id, is_bot=False, first_name="Ann", language_code=language)
+
+
+async def _pick_language(
+    db: AsyncSession, settings: Settings, user_id: int, language: str = "en"
+) -> None:
+    """Answer the language question of the first /start (the role question follows)."""
+    await start_flow(db, settings, _tg(user_id), None)
+    await choose_language_flow(db, settings, _tg(user_id), f"lang:start:{language}")
 
 
 async def _stored(db: AsyncSession, telegram_user_id: int) -> User:
@@ -56,15 +67,27 @@ def _inline(markup: object) -> list[tuple[str, str | None]]:
 # --- Bot conversation -------------------------------------------------------------------
 
 
-async def test_first_start_asks_for_a_role_then_opens_the_app(
+async def test_first_start_asks_language_then_role_then_opens_the_app(
     db: AsyncSession, https_settings: Settings
 ) -> None:
-    [welcome] = await start_flow(db, https_settings, _tg(USER_TG_ID), LISTING_ID)
+    # The Telegram app language is only a hint; the question comes first, in all languages.
+    [question] = await start_flow(db, https_settings, _tg(USER_TG_ID, "ru"), LISTING_ID)
+    assert question.text == LANGUAGE_QUESTION
+    assert _inline(question.markup) == [
+        ("🇬🇧 English", f"lang:start:en:{LISTING_ID}"),
+        ("🇷🇺 Русский", f"lang:start:ru:{LISTING_ID}"),
+        ("🇻🇳 Tiếng Việt", f"lang:start:vi:{LISTING_ID}"),
+    ]
+
+    [welcome] = await choose_language_flow(
+        db, https_settings, _tg(USER_TG_ID, "ru"), f"lang:start:en:{LISTING_ID}"
+    )
     assert welcome.text.startswith("👋 Welcome")
     assert _inline(welcome.markup) == [
         ("🔍 I'm looking for a place", f"role:tenant:{LISTING_ID}"),
         ("🔑 I'm a landlord", f"role:landlord:{LISTING_ID}"),
     ]
+    assert (await _stored(db, USER_TG_ID)).preferred_language is Language.EN
 
     [done] = await choose_role_flow(
         db, https_settings, _tg(USER_TG_ID), f"role:tenant:{LISTING_ID}"
@@ -83,10 +106,44 @@ async def test_first_start_asks_for_a_role_then_opens_the_app(
     assert _inline(again.markup) == [("🏠 Open apartments", "https://app.example/")]
 
 
+async def test_vietnamese_conversation_and_language_command(
+    db: AsyncSession, https_settings: Settings
+) -> None:
+    await start_flow(db, https_settings, _tg(USER_TG_ID), None)
+    [welcome] = await choose_language_flow(db, https_settings, _tg(USER_TG_ID), "lang:start:vi")
+    assert welcome.text.startswith("👋 Chào mừng bạn")
+    assert _inline(welcome.markup)[1][0] == "🔑 Tôi là chủ nhà"
+    [request] = await choose_role_flow(db, https_settings, _tg(USER_TG_ID), "role:landlord")
+    assert request.text.startswith("Để đăng căn hộ")
+
+    # /language switches everything to the new language and only confirms.
+    [question] = await language_flow(db, https_settings, _tg(USER_TG_ID))
+    assert [data for _, data in _inline(question.markup)] == [
+        "lang:set:en",
+        "lang:set:ru",
+        "lang:set:vi",
+    ]
+    [confirmation] = await choose_language_flow(db, https_settings, _tg(USER_TG_ID), "lang:set:ru")
+    assert confirmation.text == "✅ Язык: 🇷🇺 Русский."
+    assert _inline(confirmation.markup) == [("🏠 Открыть квартиры", "https://app.example/")]
+    [info] = await role_flow(db, https_settings, _tg(USER_TG_ID))
+    assert info.text.startswith("Ваша роль: арендатор.")
+
+
+async def test_language_chosen_in_the_app_is_not_asked_again(
+    api: AsyncClient, db: AsyncSession, https_settings: Settings
+) -> None:
+    user = await make_user(db, USER_TG_ID)
+    headers = auth_headers(https_settings, user)
+    await api.patch("/api/auth/me", json={"preferred_language": "vi"}, headers=headers)
+    [reply] = await start_flow(db, https_settings, _tg(USER_TG_ID), None)
+    assert reply.text.startswith("👋 Chào mừng bạn")  # straight to the role question
+
+
 async def test_becoming_a_landlord_requires_sharing_own_contact(
     db: AsyncSession, https_settings: Settings
 ) -> None:
-    await start_flow(db, https_settings, _tg(LANDLORD_TG_ID, "ru"), None)
+    await _pick_language(db, https_settings, LANDLORD_TG_ID, "ru")
     [request] = await choose_role_flow(
         db, https_settings, _tg(LANDLORD_TG_ID, "ru"), "role:landlord"
     )
@@ -138,7 +195,8 @@ async def test_role_command_shows_and_changes_the_role(
 async def test_configured_administrator_is_not_asked_for_a_role(
     db: AsyncSession, https_settings: Settings
 ) -> None:
-    [reply] = await start_flow(db, https_settings, _tg(ADMIN_TG_ID), None)
+    await start_flow(db, https_settings, _tg(ADMIN_TG_ID), None)
+    [reply] = await choose_language_flow(db, https_settings, _tg(ADMIN_TG_ID), "lang:start:en")
     assert reply.text.startswith("Long-term apartments")
     [info] = await role_flow(db, https_settings, _tg(ADMIN_TG_ID))
     assert info.text.startswith("Your role: administrator.")

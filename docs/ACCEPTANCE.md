@@ -13,7 +13,7 @@ mobile and desktop viewports). "Manual" means checked by hand against the runnin
 | 5 | Full apartment details | e2e/Vitest details tests (facts, missing fields hidden, map, contacts) | ✅ |
 | 6 | Filters work on map and list | e2e `filters apply to both map and list views`, backend filter tests | ✅ |
 | 7 | Contact agent and channel admin | Vitest contact tests (browser + Telegram link handling) | ✅ |
-| 8 | English and Russian UI | e2e language test, translation key parity check, Russian plurals | ✅ |
+| 8 | English, Russian and Vietnamese UI | e2e language test, translation key parity check (Vitest), Russian plurals | ✅ |
 | 9 | Admin can create a draft | e2e admin flow, backend CRUD tests | ✅ |
 | 10 | Admin uploads real images and sets coordinates | Real uploads verified in the browser against the dev stack (WebP variants in S3); address search + map pin; e2e admin flow; backend image tests | ✅ |
 | 11 | Valid listing → Available → appears on the public map | Backend lifecycle + public visibility tests; e2e admin publish; manual | ✅ |
@@ -27,7 +27,7 @@ mobile and desktop viewports). "Manual" means checked by hand against the runnin
 | 19 | Data and images survive restarts | Named volumes; containers recreated many times during development with data intact | ✅ |
 | 20 | Works on mobile and desktop | Playwright `mobile` (Pixel 7) and `desktop` projects; manual checks at 375 px and desktop widths | ✅ |
 | 21 | Started with documented instructions | README (development), DEPLOYMENT.md (production) | ✅ |
-| 22 | Critical automated tests pass | Backend 237, Vitest 52, Playwright 10 | ✅ |
+| 22 | Critical automated tests pass | Backend 240, Vitest 55, Playwright 10 | ✅ |
 
 ## Remaining limitations
 

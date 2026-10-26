@@ -3,7 +3,7 @@ import { createContext, type ReactNode, useCallback, useEffect, useMemo, useStat
 import { apiFetch } from '@/api/client';
 import { getSessionToken, setSessionToken } from '@/api/session';
 import type { AuthResponse, Language, User } from '@/api/types';
-import i18n, { hasStoredLanguage } from '@/i18n';
+import { changeLanguage, isSupportedLanguage } from '@/i18n';
 import { getInitData } from '@/telegram/webapp';
 
 import { loginWithTelegram } from './login';
@@ -38,8 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
   const accept = useCallback((nextUser: User) => {
-    if (!hasStoredLanguage() && nextUser.preferred_language) {
-      void i18n.changeLanguage(nextUser.preferred_language);
+    // The profile language is the user's latest explicit choice (here or in the bot).
+    if (isSupportedLanguage(nextUser.preferred_language)) {
+      void changeLanguage(nextUser.preferred_language);
     }
     setUser(nextUser);
     setStatus('authenticated');
