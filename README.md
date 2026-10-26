@@ -3,9 +3,17 @@
 A Telegram Mini App for browsing and managing long-term rental apartments in Da Nang:
 a map-based catalog for users and a mobile-friendly admin panel for channel administrators.
 
-> **Status: Phase 1 (Foundation) of 6.** Infrastructure, data model, migrations and a
-> frontend ↔ API health check are done. Auth, the catalog API, map UI, admin panel and
-> channel publishing come next. See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+> **Status: Phase 2 (Authentication & core API) of 6.** The backend now has Telegram
+> authentication, admin authorization, listing CRUD with the status lifecycle, and the
+> public catalog/map API. Next: the public map UI (Phase 3), the admin panel (Phase 4)
+> and channel publishing (Phase 5). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+
+## Branches
+
+| Branch | Purpose |
+|---|---|
+| `main` | Production. Only receives tested work promoted from `develop`. |
+| `develop` | Integration/testing. Phase work lands here first. |
 
 ## Stack
 
@@ -29,7 +37,15 @@ docs/       implementation plan and design decisions
 
 ## Quick start (Docker)
 
-Prerequisites: Docker with Compose v2 (Docker Desktop, OrbStack, Colima, …).
+Prerequisites: Docker with Compose v2 (Docker Desktop, OrbStack, Colima, …). On macOS
+without Docker Desktop:
+
+```bash
+brew install colima docker docker-compose docker-buildx
+colima start --cpu 4 --memory 6 --vm-type vz --mount-type virtiofs
+```
+
+(Homebrew prints how to register the compose/buildx plugins in `~/.docker/config.json`.)
 
 ```bash
 cp .env.example .env
@@ -83,6 +99,39 @@ Data model notes (full rationale in [docs/DECISIONS.md](docs/DECISIONS.md)):
 - A partial unique index allows only one pending/succeeded/unknown Telegram publication
   per apartment and channel; `idempotency_key` is unique.
 
+## API overview (Phase 2)
+
+Interactive docs: http://localhost:8000/api/docs. All errors use one envelope:
+`{"error": {"code": "...", "message": "...", "details": ...}}`.
+
+| Method & path | Access | Purpose |
+|---|---|---|
+| `POST /api/auth/telegram` | public, rate-limited | Exchange Telegram `initData` for a bearer token |
+| `POST /api/auth/dev` | dev only | Token for any Telegram user id (`DEV_AUTH_ENABLED=true`) |
+| `GET/PATCH /api/auth/me` | user | Current user (incl. `is_admin`); update `preferred_language` |
+| `GET /api/districts` | public | Active districts (en/ru names) |
+| `GET /api/apartments` | public | Available listings, paginated; filters below; `sort=newest\|price_asc\|price_desc` |
+| `GET /api/apartments/map` | public | Markers inside the required `bbox`, same filters |
+| `GET /api/apartments/{id}` | public | Details with contacts + share link; `404` unknown, `410` rented/archived |
+| `GET /api/admin/dashboard` | admin | Counts by status |
+| `GET /api/admin/apartments` | admin | All non-deleted listings; `q` (title search), `status`, paging |
+| `POST /api/admin/apartments` | admin | Create a draft (any subset of fields) |
+| `GET/PATCH/DELETE /api/admin/apartments/{id}` | admin | Read / partial update / soft delete |
+| `PATCH /api/admin/apartments/{id}/status` | admin | Lifecycle transition (validated) |
+
+Catalog filters: `min_price`, `max_price` (VND), repeated `bedrooms` (`0` = studio,
+`3` = 3+), repeated `district` (ids), `min_area`, `max_area` (m²), and
+`bbox=min_lng,min_lat,max_lng,max_lat`.
+
+Example (dev login with `DEV_AUTH_ENABLED=true` and your id in `ADMIN_TELEGRAM_USER_IDS`):
+
+```bash
+curl -s -X POST localhost:8000/api/auth/dev -H 'Content-Type: application/json' \
+  -d '{"telegram_user_id": 1001}'
+```
+
+Image upload and Telegram publishing endpoints arrive in Phases 4 and 5.
+
 ## Running without Docker
 
 You still need a PostGIS-enabled PostgreSQL and an S3-compatible endpoint (e.g. start
@@ -113,8 +162,11 @@ cd backend
 .venv/bin/ruff check . && .venv/bin/ruff format --check .
 .venv/bin/mypy app tests alembic/env.py
 
-# backend PostGIS integration tests (uses the separate <db>_test database)
-docker compose exec backend pytest -m db
+# full backend suite incl. PostGIS tests, inside Docker (uses the <db>_test database)
+docker compose exec backend pytest
+
+# or from the host against the Compose database
+TEST_DATABASE_URL=postgresql+asyncpg://danang:danang@localhost:5433/danang_test .venv/bin/pytest
 
 # frontend
 cd frontend
@@ -136,8 +188,11 @@ All configuration is environment-based; see [.env.example](.env.example) for eve
 | Channel | `TELEGRAM_CHANNEL_ID` | Numeric `-100…` ID or `@username`. The bot must be a channel admin with "Post messages". Never accepted from clients. |
 | Admins | `ADMIN_TELEGRAM_USER_IDS` | Comma-separated numeric Telegram user IDs. Usernames are not used for authorization. |
 | Admin contact | `ADMIN_CONTACT_TELEGRAM` | Channel administrator's username shown on every listing. |
-| Sessions | `SESSION_SECRET`, `SESSION_TTL_MINUTES` | Secret must be ≥ 32 chars in production. |
-| Dev login | `DEV_AUTH_ENABLED` | Browser-only development bypass (Phase 2). The app refuses to start with it enabled in production. |
+| Sessions | `SESSION_SECRET`, `SESSION_TTL_MINUTES` | Bearer JWT lifetime. Secret must be ≥ 32 chars in production (dev falls back to an insecure built-in value with a warning). |
+| initData freshness | `TELEGRAM_INIT_DATA_MAX_AGE_SECONDS` | Older Telegram launch data is rejected. |
+| Dev login | `DEV_AUTH_ENABLED` | Browser-only development bypass. The app refuses to start with it enabled in production. |
+| Rate limits | `RATE_LIMIT_AUTH`, `RATE_LIMIT_ADMIN_WRITE` | Per IP for login, per admin for writes. |
+| Service area | `SERVICE_AREA_BBOX` | Listing coordinates must fall inside this box. |
 | Image storage | `S3_*` | Any S3-compatible provider. `S3_AUTO_CREATE_BUCKET` must be `false` in production. |
 | Map | _(Phase 3)_ | Tile style URL and geocoding provider will be configurable; public OSM tile servers are not used for production traffic. |
 

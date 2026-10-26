@@ -8,11 +8,13 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
-    "sqlalchemy[asyncio]>=2.0.36",
+    "sqlalchemy[asyncio]>=2.1",
     "asyncpg>=0.30",
     "alembic>=1.14",
     "geoalchemy2>=0.16",
     "boto3>=1.35",
+    "pyjwt>=2.9",
+    "limits>=3.13",
 ]
 
 [project.optional-dependencies]

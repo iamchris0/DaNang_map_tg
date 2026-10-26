@@ -1,48 +1,21 @@
-"""Integration tests against a real PostGIS database.
+"""Schema-level integration tests against a real PostGIS database (see conftest.py)."""
 
-Run with TEST_DATABASE_URL pointing at a disposable database, e.g. inside Docker Compose:
-    docker compose exec backend sh -c 'TEST_DATABASE_URL=$DATABASE_URL_TEST pytest -m db'
-The database is migrated to head and wiped back to base.
-"""
-
-import os
 import uuid
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator
 
 import pytest
-from alembic import command
-from alembic.config import Config
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncConnection, create_async_engine
 
-from tests.test_migrations import BACKEND_DIR
+from tests.conftest import requires_db
 
-TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
-
-pytestmark = [
-    pytest.mark.db,
-    pytest.mark.skipif(not TEST_DATABASE_URL, reason="TEST_DATABASE_URL not set"),
-]
-
-
-@pytest.fixture(scope="module")
-def migrated_db() -> Iterator[str]:
-    assert TEST_DATABASE_URL
-    os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-    from app.core.config import get_settings
-
-    get_settings.cache_clear()
-    config = Config(str(BACKEND_DIR / "alembic.ini"))
-    command.downgrade(config, "base")
-    command.upgrade(config, "head")
-    yield TEST_DATABASE_URL
-    command.downgrade(config, "base")
+pytestmark = [pytest.mark.db, requires_db]
 
 
 @pytest.fixture
-async def conn(migrated_db: str) -> AsyncIterator[AsyncConnection]:
-    engine = create_async_engine(migrated_db)
+async def conn(migrated_db_url: str) -> AsyncIterator[AsyncConnection]:
+    engine = create_async_engine(migrated_db_url)
     async with engine.connect() as connection:
         transaction = await connection.begin()
         yield connection

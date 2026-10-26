@@ -11,6 +11,9 @@ PROD_OK: dict[str, Any] = {
     "environment": "production",
     "session_secret": "x" * 32,
     "telegram_bot_token": "123456:abc",
+    # Explicit, so values from the surrounding environment (e.g. Docker) can't leak in.
+    "dev_auth_enabled": False,
+    "s3_auto_create_bucket": False,
 }
 
 

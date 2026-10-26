@@ -97,6 +97,14 @@ class Apartment(TimestampMixin, Base):
         passive_deletes=True,
         lazy="raise",
     )
+    # Cover = image with sort_order 0 (the image service keeps orders contiguous from 0).
+    cover_image: Mapped["ApartmentImage | None"] = relationship(
+        primaryjoin="and_(Apartment.id == ApartmentImage.apartment_id, "
+        "ApartmentImage.sort_order == 0)",
+        viewonly=True,
+        uselist=False,
+        lazy="raise",
+    )
 
     __table_args__ = (
         CheckConstraint(

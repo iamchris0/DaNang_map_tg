@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     telegram_init_data_max_age_seconds: int = 60 * 60 * 24
     dev_auth_enabled: bool = False
     admin_telegram_user_ids: Annotated[frozenset[int], NoDecode] = frozenset()
+    rate_limit_auth: str = "20/minute"
+    rate_limit_admin_write: str = "120/minute"
+
+    # Listings must be placed inside this box: "min_lng,min_lat,max_lng,max_lat".
+    # Default covers Da Nang city incl. Hoa Vang.
+    service_area_bbox: Annotated[tuple[float, float, float, float], NoDecode] = (
+        107.80,
+        15.85,
+        108.40,
+        16.25,
+    )
 
     # Telegram
     telegram_bot_token: SecretStr = SecretStr("")
@@ -64,6 +75,16 @@ class Settings(BaseSettings):
     def _split_admin_ids(cls, value: object) -> object:
         if isinstance(value, str):
             return frozenset(int(part) for part in value.split(",") if part.strip())
+        return value
+
+    @field_validator("service_area_bbox", mode="before")
+    @classmethod
+    def _split_bbox(cls, value: object) -> object:
+        if isinstance(value, str):
+            parts = tuple(float(part) for part in value.split(","))
+            if len(parts) != 4 or parts[0] >= parts[2] or parts[1] >= parts[3]:
+                raise ValueError("SERVICE_AREA_BBOX must be min_lng,min_lat,max_lng,max_lat")
+            return parts
         return value
 
     @model_validator(mode="after")

@@ -68,3 +68,51 @@ Python 3.13 in Docker (spec requires 3.12+). Dependencies are declared in
 `postgis/postgis` publishes amd64 images only. Compose uses `imresamu/postgis`
 (same Dockerfiles, built for amd64 and arm64 by a docker-postgis maintainer) so the
 stack runs natively on Apple Silicon and ARM servers.
+
+## D11. API sessions: bearer JWT, not cookies
+
+`POST /api/auth/telegram` verifies initData (HMAC-SHA256 per the Telegram docs; every
+field except `hash`, including the newer `signature`, is part of the data-check-string)
+and returns a short-lived HS256 JWT (`SESSION_TTL_MINUTES`, default 24 h) that the
+client sends as `Authorization: Bearer`. Cookies are unreliable inside Telegram's
+webviews (third-party-cookie rules in Telegram Web), and bearer tokens also make CSRF
+irrelevant. The token carries only the user id: admin rights are re-checked against
+`ADMIN_TELEGRAM_USER_IDS` on every request, so removing an ID revokes access at the
+next restart, without waiting for tokens to expire.
+
+## D12. Development login
+
+`POST /api/auth/dev` issues a session for any Telegram user id without a signature, so
+the app can be used in a normal browser. It returns 404 unless `DEV_AUTH_ENABLED=true`,
+and the app refuses to start with that flag in production.
+
+## D13. Status transitions
+
+Beyond the required transitions, `draft → archived` and `rented → archived` are allowed
+so stale drafts and old rentals can be tidied away. Going back to `draft` is not allowed.
+Setting the current status again is a no-op (safe for retries). Any change to
+`available` re-validates required fields and requires at least one photo. Editing a
+non-draft listing may not remove a required field.
+
+## D14. Unavailable vs unknown listings
+
+`GET /api/apartments/{id}` returns `404 listing_not_found` for unknown, deleted and
+draft listings, and `410 listing_unavailable` for rented/archived ones, so a shared
+link can say "no longer available" without disclosing any listing data.
+
+## D15. Rate limiting
+
+The `limits` library with in-process memory storage (moving window): login attempts
+per client IP and admin writes per admin. This is enough for a single backend instance.
+For multiple instances, switch to a shared storage such as Redis.
+
+## D16. Service area
+
+Coordinates must fall inside `SERVICE_AREA_BBOX` (default: Da Nang including
+Hoa Vang). This catches swapped latitude/longitude and mis-taps on the map picker.
+
+## D17. Catalog pagination
+
+The list view uses page/page_size with a total count, because the UI shows the number
+of matches anyway. The map endpoint requires a viewport `bbox` and returns at most 500
+lightweight markers (`truncated: true` beyond that). Clustering happens client-side.

@@ -33,8 +33,8 @@ truth for requirements; this file records how we deliver it and in what order.
 
 | Phase | Scope | Exit check |
 |---|---|---|
-| 1 Foundation | Monorepo, tooling (ruff, mypy, pytest, ESLint, Prettier, Vitest), Docker Compose, settings, ORM models, initial migration + district reference data, health endpoints, frontend shell talking to API | `docker compose up` → `/api/health/ready` OK, frontend shows backend status; lint + tests pass |
-| 2 Auth & core API | initData HMAC validation, session tokens (signed JWT in `Authorization` header), admin allow-list, apartment CRUD service, status state machine, public catalog + map (bbox) endpoints, districts endpoint, structured errors, rate limiting | pytest suite incl. PostGIS integration tests |
+| 1 Foundation ✅ | Monorepo, tooling (ruff, mypy, pytest, ESLint, Prettier, Vitest), Docker Compose, settings, ORM models, initial migration + district reference data, health endpoints, frontend shell talking to API | `docker compose up` → `/api/health/ready` OK, frontend shows backend status; lint + tests pass |
+| 2 Auth & core API ✅ | initData HMAC validation, session tokens (signed JWT in `Authorization` header (D11)), admin allow-list, apartment CRUD service, status state machine, public catalog + map (bbox) endpoints, districts endpoint, structured errors, rate limiting | pytest suite incl. PostGIS integration tests |
 | 3 Public frontend | Telegram SDK init/theme/viewport/safe-area, i18n switcher, MapLibre map with price markers + clustering, bottom sheet / side panel, list view with infinite scroll, shared filter state in URL, details page, contacts, `startapp` deep links | Vitest + Playwright flows |
 | 4 Admin panel | Dashboard counts, listing cards w/ search + status filter, RHF+Zod form, location picker w/ geocoding, image upload (validation, Pillow re-encode to WebP variants, S3), reorder/cover, status actions, unsaved-changes guard | e2e admin create/edit/status |
 | 5 Channel publishing | Post renderer (caption limits), preview, confirm, aiogram send (media group / photo / text), idempotent publication records, error taxonomy, "unknown" state recovery | mocked Bot API tests |
