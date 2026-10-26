@@ -4,7 +4,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Response, UploadFile, status
 
 from app.api import presenters
-from app.api.deps import AppSettings, DbSession, limit_admin_write, require_admin
+from app.api.deps import (
+    AppSettings,
+    DbSession,
+    limit_admin_write,
+    require_admin,
+    require_listing_access,
+)
 from app.core.storage import ObjectStorage, get_storage
 from app.schemas.common import ImageOut
 from app.schemas.images import ImageOrderUpdate
@@ -13,7 +19,11 @@ from app.services import images
 router = APIRouter(
     prefix="/admin/apartments/{apartment_id}/images",
     tags=["admin"],
-    dependencies=[Depends(require_admin), Depends(limit_admin_write)],
+    dependencies=[
+        Depends(require_admin),
+        Depends(require_listing_access),
+        Depends(limit_admin_write),
+    ],
 )
 Storage = Annotated[ObjectStorage, Depends(get_storage)]
 

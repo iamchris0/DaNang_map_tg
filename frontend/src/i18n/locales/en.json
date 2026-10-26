@@ -147,6 +147,7 @@
   },
   "admin": {
     "title": "Admin",
+    "titleLandlord": "My listings",
     "open": "Admin panel",
     "backToCatalog": "Catalog",
     "accessDenied": "This section is only available to administrators.",

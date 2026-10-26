@@ -83,7 +83,13 @@ export function blankInput(): ApartmentInput {
  * Stateful in-memory admin API (signed-in administrator). Mirrors the backend's lifecycle
  * rules closely enough to exercise the UI; the backend has its own exhaustive tests.
  */
-export function installFakeAdminApi(initial: Partial<Stored>[] = [], { isAdmin = true } = {}) {
+export function installFakeAdminApi(
+  initial: Partial<Stored>[] = [],
+  {
+    isAdmin = true,
+    role = isAdmin ? 'admin' : 'user',
+  }: { isAdmin?: boolean; role?: 'user' | 'landlord' | 'admin' } = {},
+) {
   setSessionToken('test-session');
   const store = new Map<string, Stored>();
   let counter = 0;
@@ -150,6 +156,7 @@ export function installFakeAdminApi(initial: Partial<Stored>[] = [], { isAdmin =
         display_name: 'Boss',
         preferred_language: null,
         is_admin: isAdmin,
+        role,
       });
     }
     if (path === '/api/districts') return json(DISTRICTS);

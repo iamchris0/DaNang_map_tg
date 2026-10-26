@@ -154,6 +154,23 @@ async def soft_delete(db: AsyncSession, apartment_id: uuid.UUID) -> None:
     await db.commit()
 
 
+def _owned(owner_id: uuid.UUID | None) -> list[ColumnElement[bool]]:
+    """Live listings, optionally only those created by one landlord."""
+    conditions: list[ColumnElement[bool]] = [Apartment.deleted_at.is_(None)]
+    if owner_id is not None:
+        conditions.append(Apartment.created_by == owner_id)
+    return conditions
+
+
+async def ensure_owner(db: AsyncSession, apartment_id: uuid.UUID, owner_id: uuid.UUID) -> None:
+    """404 unless the listing exists and belongs to this landlord (others' stay invisible)."""
+    found = await db.scalar(
+        select(Apartment.id).where(Apartment.id == apartment_id, *_owned(owner_id))
+    )
+    if found is None:
+        raise not_found()
+
+
 @dataclass(frozen=True, slots=True)
 class AdminListRow:
     apartment: Apartment
@@ -178,8 +195,9 @@ async def list_for_admin(
     status: ApartmentStatus | None,
     page: int,
     page_size: int,
+    owner_id: uuid.UUID | None = None,
 ) -> tuple[list[AdminListRow], int]:
-    conditions: list[ColumnElement[bool]] = [Apartment.deleted_at.is_(None)]
+    conditions = _owned(owner_id)
     if query:
         escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         conditions.append(Apartment.title.ilike(f"%{escaped}%", escape="\\"))
@@ -199,11 +217,11 @@ async def list_for_admin(
     return items, total or 0
 
 
-async def dashboard_counts(db: AsyncSession) -> dict[ApartmentStatus, int]:
+async def dashboard_counts(
+    db: AsyncSession, owner_id: uuid.UUID | None = None
+) -> dict[ApartmentStatus, int]:
     rows = await db.execute(
-        select(Apartment.status, func.count())
-        .where(Apartment.deleted_at.is_(None))
-        .group_by(Apartment.status)
+        select(Apartment.status, func.count()).where(*_owned(owner_id)).group_by(Apartment.status)
     )
     counts = dict.fromkeys(ApartmentStatus, 0)
     for status, count in rows:

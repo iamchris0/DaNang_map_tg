@@ -4,8 +4,9 @@ from sqlalchemy import Enum
 
 
 class UserRole(StrEnum):
-    USER = "user"
-    ADMIN = "admin"
+    USER = "user"  # tenant: browses the catalog
+    LANDLORD = "landlord"  # chosen in the bot after sharing a contact; manages own listings
+    ADMIN = "admin"  # cached from ADMIN_TELEGRAM_USER_IDS; manages every listing
 
 
 class Language(StrEnum):

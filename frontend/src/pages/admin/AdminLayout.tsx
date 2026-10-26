@@ -69,7 +69,9 @@ export function AdminLayout() {
             <BackIcon />
           </Link>
         )}
-        <h1 className="flex-1 text-lg font-bold">{t('admin.title')}</h1>
+        <h1 className="flex-1 text-lg font-bold">
+          {user?.role === 'landlord' ? t('admin.titleLandlord') : t('admin.title')}
+        </h1>
         <LanguageSwitcher />
       </header>
       <main className="min-h-0 flex-1 overflow-y-auto">{content}</main>

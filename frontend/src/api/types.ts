@@ -83,6 +83,8 @@ export interface User {
   display_name: string | null;
   preferred_language: Language | null;
   is_admin: boolean;
+  /** "user" = tenant; landlords manage only their own listings; "admin" manages all. */
+  role: 'user' | 'landlord' | 'admin';
 }
 
 export interface AuthResponse {

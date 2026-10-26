@@ -5,6 +5,7 @@ import { installFakeApi } from '@/test/fakeApi';
 import { maps } from '@/test/fakeMaplibre';
 import { RIVER_2BR, SEA_VIEW, STUDIO } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
+import { installTelegram } from '@/test/telegram';
 
 async function markerButtons() {
   const map = await screen.findByRole('region', { name: 'Map of apartments in Da Nang' });
@@ -22,6 +23,22 @@ describe('map view', () => {
     expect(markers[2]).toHaveAccessibleName('7.5M ₫, Studio, approximate location');
     // The map query carries the current viewport.
     expect(api.queries('/api/apartments/map')[0]?.get('bbox')).toBe('108,15.9,108.4,16.2');
+  });
+
+  it('loads the catalog as the signed-in Telegram user (landlords see their own)', async () => {
+    const api = installFakeApi();
+    installTelegram();
+    renderApp('/');
+
+    await markerButtons();
+    const paths = api.requests.map((r) => r.url.pathname);
+    const login = paths.indexOf('/api/auth/telegram');
+    const firstCatalog = paths.findIndex((path) => path.startsWith('/api/apartments'));
+    // Catalog requests wait for the sign-in, then carry the session.
+    expect(login).toBeGreaterThanOrEqual(0);
+    expect(firstCatalog).toBeGreaterThan(login);
+    const catalog = api.requests.filter((r) => r.url.pathname.startsWith('/api/apartments'));
+    expect(catalog.every((r) => r.headers.get('Authorization')?.startsWith('Bearer '))).toBe(true);
   });
 
   it('opens a preview sheet for the selected marker and then the details page', async () => {

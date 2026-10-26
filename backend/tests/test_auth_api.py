@@ -41,6 +41,7 @@ async def test_login_creates_regular_user(api: AsyncClient, db: AsyncSession) ->
         "display_name": "Test",
         "preferred_language": "ru",
         "is_admin": False,
+        "role": "user",
     }
     user = await db.scalar(select(User).where(User.telegram_user_id == USER_TG_ID))
     assert user is not None and user.role is UserRole.USER

@@ -191,10 +191,18 @@ logged by the backend as `Client error: …`.
 
 Open `/admin` (or the ⚙ button in the catalog header, shown to administrators only).
 
-- **Access:** inside Telegram the user is signed in automatically; admin rights come from
-  `ADMIN_TELEGRAM_USER_IDS` and are enforced by the API on every request. In a local
-  browser, development builds offer a *Developer sign-in* (needs `DEV_AUTH_ENABLED=true`
-  and your ID in `ADMIN_TELEGRAM_USER_IDS`). Production builds don't contain it.
+- **Access:** inside Telegram the user is signed in automatically. Two kinds of users get
+  the panel, both enforced by the API on every request:
+  - **Administrators** (`ADMIN_TELEGRAM_USER_IDS`) manage every listing and see all of them.
+  - **Landlords** choose that role in the bot (see *Roles* below). They manage, and see on the
+    map, only the listings they created; other listings answer 404.
+
+  In a local browser, development builds offer a *Developer sign-in* on `localhost` (needs
+  `DEV_AUTH_ENABLED=true`). Production builds don't contain it.
+- **Roles (bot):** on the first `/start` the bot asks *tenant* or *landlord*. Landlord shows
+  Telegram's contact button; sharing your **own** contact (Telegram asks to confirm) makes you
+  a landlord. `/role` shows the current role and switches it. Tenants (and anyone not signed
+  in) see every available listing.
 - **Dashboard:** counts per status (tap to filter), search by title, listing cards with
   cover, rent, district, status, channel-post state and quick status actions.
 - **Form** (`/admin/apartments/new`, `/admin/apartments/:id`): every field optional for a

@@ -5,7 +5,15 @@ from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import presenters
-from app.api.deps import AdminUser, AppSettings, DbSession, limit_admin_write, require_admin
+from app.api.deps import (
+    AdminUser,
+    AppSettings,
+    DbSession,
+    OwnerScope,
+    limit_admin_write,
+    require_admin,
+    require_listing_access,
+)
 from app.core.config import Settings
 from app.models import Apartment
 from app.models.enums import ApartmentStatus, Language
@@ -23,6 +31,9 @@ from app.services import apartments, geocoding
 # Every route here requires a verified administrator, whatever the frontend shows.
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 write = [Depends(limit_admin_write)]
+# Landlords only reach their own listings; configured administrators reach all.
+owned = [Depends(require_listing_access)]
+owned_write = [*owned, *write]
 
 
 async def _detail(db: AsyncSession, settings: Settings, apartment: Apartment) -> AdminApartmentOut:
@@ -50,8 +61,8 @@ async def geocode(
 
 
 @router.get("/dashboard", response_model=DashboardOut)
-async def dashboard(db: DbSession) -> DashboardOut:
-    counts = await apartments.dashboard_counts(db)
+async def dashboard(db: DbSession, owner: OwnerScope) -> DashboardOut:
+    counts = await apartments.dashboard_counts(db, owner)
     return DashboardOut(
         total=sum(counts.values()),
         available=counts[ApartmentStatus.AVAILABLE],
@@ -65,13 +76,14 @@ async def dashboard(db: DbSession) -> DashboardOut:
 async def list_apartments(
     db: DbSession,
     settings: AppSettings,
+    owner: OwnerScope,
     q: Annotated[str | None, Query(max_length=200, description="Search in title")] = None,
     status_filter: Annotated[ApartmentStatus | None, Query(alias="status")] = None,
     page: Annotated[int, Query(ge=1, le=10_000)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> Page[AdminApartmentListItem]:
     rows, total = await apartments.list_for_admin(
-        db, query=q, status=status_filter, page=page, page_size=page_size
+        db, query=q, status=status_filter, page=page, page_size=page_size, owner_id=owner
     )
     return Page(
         items=[
@@ -97,7 +109,7 @@ async def create_apartment(
     return await _detail(db, settings, apartment)
 
 
-@router.get("/apartments/{apartment_id}", response_model=AdminApartmentOut)
+@router.get("/apartments/{apartment_id}", response_model=AdminApartmentOut, dependencies=owned)
 async def get_apartment(
     apartment_id: uuid.UUID, db: DbSession, settings: AppSettings
 ) -> AdminApartmentOut:
@@ -105,7 +117,9 @@ async def get_apartment(
     return await _detail(db, settings, apartment)
 
 
-@router.patch("/apartments/{apartment_id}", response_model=AdminApartmentOut, dependencies=write)
+@router.patch(
+    "/apartments/{apartment_id}", response_model=AdminApartmentOut, dependencies=owned_write
+)
 async def update_apartment(
     apartment_id: uuid.UUID, body: ApartmentUpdate, db: DbSession, settings: AppSettings
 ) -> AdminApartmentOut:
@@ -114,7 +128,7 @@ async def update_apartment(
 
 
 @router.patch(
-    "/apartments/{apartment_id}/status", response_model=AdminApartmentOut, dependencies=write
+    "/apartments/{apartment_id}/status", response_model=AdminApartmentOut, dependencies=owned_write
 )
 async def change_status(
     apartment_id: uuid.UUID, body: StatusUpdate, db: DbSession, settings: AppSettings
@@ -127,7 +141,7 @@ async def change_status(
     "/apartments/{apartment_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     response_class=Response,
-    dependencies=write,
+    dependencies=owned_write,
 )
 async def delete_apartment(apartment_id: uuid.UUID, db: DbSession) -> None:
     """Soft delete: the listing disappears everywhere but stays recoverable in the database."""

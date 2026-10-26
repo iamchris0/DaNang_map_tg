@@ -1,5 +1,6 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
+import { useAuth } from '@/auth/useAuth';
 import type { CatalogFilters } from '@/features/filters/filters';
 import { filtersToQuery } from '@/features/filters/filters';
 import type { BBox } from '@/lib/geo';
@@ -10,6 +11,15 @@ import type { ApartmentCard, ApartmentDetail, District, MapResponse, Page } from
 export type CatalogSort = 'newest' | 'price_asc' | 'price_desc';
 const PAGE_SIZE = 20;
 
+/**
+ * Who is browsing. Landlords see only their own listings, so results are cached per viewer
+ * and wait until the Telegram sign-in has settled (no flash of everyone's listings).
+ */
+function useViewer() {
+  const { status, user } = useAuth();
+  return { viewer: user?.id ?? null, ready: status !== 'loading' };
+}
+
 export function useDistricts() {
   return useQuery({
     queryKey: ['districts'],
@@ -19,14 +29,15 @@ export function useDistricts() {
 }
 
 export function useMapMarkers(bbox: BBox | null, filters: CatalogFilters) {
+  const { viewer, ready } = useViewer();
   return useQuery({
-    queryKey: ['apartments', 'map', bbox, filters],
+    queryKey: ['apartments', 'map', bbox, filters, viewer],
     queryFn: ({ signal }) =>
       apiFetch<MapResponse>(
         `/api/apartments/map${buildQuery({ ...filtersToQuery(filters), bbox: bbox?.join(',') })}`,
         { signal },
       ),
-    enabled: bbox !== null,
+    enabled: ready && bbox !== null,
     placeholderData: keepPreviousData,
   });
 }
@@ -37,8 +48,9 @@ export function useApartmentList(
   sort: CatalogSort,
   bbox: BBox | null = null,
 ) {
+  const { viewer, ready } = useViewer();
   return useInfiniteQuery({
-    queryKey: ['apartments', 'list', filters, sort, bbox],
+    queryKey: ['apartments', 'list', filters, sort, bbox, viewer],
     queryFn: ({ pageParam, signal }) =>
       apiFetch<Page<ApartmentCard>>(
         `/api/apartments${buildQuery({
@@ -53,20 +65,23 @@ export function useApartmentList(
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.page * last.page_size < last.total ? last.page + 1 : undefined,
+    enabled: ready,
     placeholderData: keepPreviousData,
   });
 }
 
 /** Number of listings matching the filters, regardless of the map viewport. */
 export function useApartmentCount(filters: CatalogFilters) {
+  const { viewer, ready } = useViewer();
   return useQuery({
-    queryKey: ['apartments', 'count', filters],
+    queryKey: ['apartments', 'count', filters, viewer],
     queryFn: ({ signal }) =>
       apiFetch<Page<ApartmentCard>>(
         `/api/apartments${buildQuery({ ...filtersToQuery(filters), page_size: 1 })}`,
         { signal },
       ),
     select: (page) => page.total,
+    enabled: ready,
     placeholderData: keepPreviousData,
   });
 }

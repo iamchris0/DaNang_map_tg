@@ -1,18 +1,20 @@
 """Run the bot (long polling): `python -m app.bot`.
 
 Separate process from the API so either can restart independently. Channel posts are sent
-by the API itself; this process only handles conversations with users.
+by the API itself; this process handles conversations with users and stores the role each
+user picks in the shared database.
 """
 
 import asyncio
 import logging
 
 from aiogram import Bot, Dispatcher
-from aiogram.types import MenuButtonWebApp, WebAppInfo
+from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
 
 from app.bot.handlers import TEXTS, build_router, mini_app_url
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.db.session import get_engine, get_sessionmaker
 from app.models.enums import Language
 
 logger = logging.getLogger("app.bot")
@@ -38,11 +40,25 @@ async def main() -> None:
     else:
         logger.warning("PUBLIC_APP_URL is not HTTPS; Mini App buttons are disabled")
 
+    # Command menu, in Russian for Russian-language clients.
+    for language in Language:
+        texts = TEXTS[language]
+        await bot.set_my_commands(
+            [
+                BotCommand(command="start", description=texts["cmd_start"]),
+                BotCommand(command="role", description=texts["cmd_role"]),
+            ],
+            language_code=None if language is Language.EN else language.value,
+        )
+
     dispatcher = Dispatcher()
-    dispatcher.include_router(build_router(settings))
+    dispatcher.include_router(build_router(settings, get_sessionmaker()))
     me = await bot.get_me()
     logger.info("Bot @%s started (polling)", me.username)
-    await dispatcher.start_polling(bot, allowed_updates=["message"])
+    try:
+        await dispatcher.start_polling(bot, allowed_updates=["message", "callback_query"])
+    finally:
+        await get_engine().dispose()
 
 
 if __name__ == "__main__":

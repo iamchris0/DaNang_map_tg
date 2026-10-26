@@ -27,6 +27,12 @@ describe('admin access', () => {
     );
   });
 
+  it('calls the panel "My listings" for landlords', async () => {
+    installFakeAdminApi([], { role: 'landlord' });
+    renderApp('/admin');
+    expect(await screen.findByRole('heading', { name: 'My listings' })).toBeInTheDocument();
+  });
+
   it('denies the admin area to regular users', async () => {
     installFakeAdminApi([], { isAdmin: false });
     renderApp('/admin');

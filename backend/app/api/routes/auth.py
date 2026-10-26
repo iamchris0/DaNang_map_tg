@@ -18,7 +18,7 @@ from app.schemas.auth import (
     UserOut,
     UserPreferencesUpdate,
 )
-from app.services.users import is_admin, upsert_telegram_user
+from app.services.users import effective_role, is_admin, upsert_telegram_user
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ def _user_out(settings: AppSettings, user: User) -> UserOut:
         display_name=user.display_name,
         preferred_language=user.preferred_language,
         is_admin=is_admin(settings, user),
+        role=effective_role(settings, user),
     )
 
 

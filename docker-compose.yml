@@ -73,9 +73,9 @@ services:
       start_period: 20s
 
   bot:
-    # Telegram bot (long polling): /start replies with a button that opens the Mini App.
-    # Opt-in locally: `docker compose --profile bot up -d bot` (needs TELEGRAM_BOT_TOKEN and an
-    # HTTPS PUBLIC_APP_URL for the buttons).
+    # Telegram bot (long polling): role choice on /start, /role, and buttons that open the
+    # Mini App. Opt-in locally: `docker compose --profile bot up -d bot` (needs
+    # TELEGRAM_BOT_TOKEN and an HTTPS PUBLIC_APP_URL for the buttons).
     profiles: ["bot"]
     build:
       context: ./backend
@@ -84,7 +84,11 @@ services:
         required: false
     environment:
       RUN_MIGRATIONS: "false"
+      # Stores the role each user picks.
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-danang}:${POSTGRES_PASSWORD:-danang}@db:5432/${POSTGRES_DB:-danang}
     command: ["python", "-m", "app.bot"]
+    volumes:
+      - ./backend:/app
     restart: unless-stopped
     depends_on:
       backend:

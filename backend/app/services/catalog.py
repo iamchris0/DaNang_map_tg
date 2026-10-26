@@ -15,11 +15,15 @@ from app.schemas.catalog import BEDROOMS_3_PLUS, CatalogFilters, CatalogSort
 MAP_MARKER_LIMIT = 500
 
 
-def _public_conditions(filters: CatalogFilters) -> list[ColumnElement[bool]]:
+def _public_conditions(
+    filters: CatalogFilters, owner_id: uuid.UUID | None
+) -> list[ColumnElement[bool]]:
     conditions: list[ColumnElement[bool]] = [
         Apartment.deleted_at.is_(None),
         Apartment.status == ApartmentStatus.AVAILABLE,
     ]
+    if owner_id is not None:
+        conditions.append(Apartment.created_by == owner_id)
     if filters.min_price is not None:
         conditions.append(Apartment.price_vnd >= filters.min_price)
     if filters.max_price is not None:
@@ -61,9 +65,15 @@ async def _count(db: AsyncSession, conditions: list[ColumnElement[bool]]) -> int
 
 
 async def list_public(
-    db: AsyncSession, filters: CatalogFilters, sort: CatalogSort, page: int, page_size: int
+    db: AsyncSession,
+    filters: CatalogFilters,
+    sort: CatalogSort,
+    page: int,
+    page_size: int,
+    owner_id: uuid.UUID | None = None,
 ) -> tuple[list[Apartment], int]:
-    conditions = _public_conditions(filters)
+    """`owner_id` limits the catalog to one landlord's listings (what a landlord sees)."""
+    conditions = _public_conditions(filters, owner_id)
     query: Select[Apartment] = (
         select(Apartment)
         .where(*conditions)
@@ -76,9 +86,11 @@ async def list_public(
     return items, await _count(db, conditions)
 
 
-async def map_markers(db: AsyncSession, filters: CatalogFilters) -> tuple[list[Any], int, bool]:
+async def map_markers(
+    db: AsyncSession, filters: CatalogFilters, owner_id: uuid.UUID | None = None
+) -> tuple[list[Any], int, bool]:
     """Lightweight marker rows inside the bbox; capped to keep payloads small."""
-    conditions = _public_conditions(filters)
+    conditions = _public_conditions(filters, owner_id)
     rows = (
         await db.execute(
             select(

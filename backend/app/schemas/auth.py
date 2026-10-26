@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from app.models.enums import Language
+from app.models.enums import Language, UserRole
 from app.schemas.common import Schema
 
 
@@ -25,6 +25,8 @@ class UserOut(Schema):
     display_name: str | None
     preferred_language: Language | None
     is_admin: bool
+    # "user" (tenant), "landlord" (manages own listings) or "admin" (manages all listings).
+    role: UserRole
 
 
 class AuthResponse(Schema):

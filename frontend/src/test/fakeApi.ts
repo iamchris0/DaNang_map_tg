@@ -37,7 +37,7 @@ export function installFakeApi({
   apartments = ALL_APARTMENTS,
   detailErrors = {},
 }: FakeApiOptions = {}) {
-  const requests: { method: string; url: URL; body: unknown }[] = [];
+  const requests: { method: string; url: URL; body: unknown; headers: Headers }[] = [];
 
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
     const url = new URL(
@@ -46,7 +46,7 @@ export function installFakeApi({
     );
     const method = init?.method ?? 'GET';
     const body: unknown = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
-    requests.push({ method, url, body });
+    requests.push({ method, url, body, headers: new Headers(init?.headers) });
     const params = url.searchParams;
     const path = url.pathname;
     const matching = apartments.filter((a) => matches(a, params));
@@ -100,6 +100,7 @@ export function installFakeApi({
             display_name: 'Tester',
             preferred_language: null,
             is_admin: false,
+            role: 'user',
           },
         }),
       );

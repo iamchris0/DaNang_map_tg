@@ -4,7 +4,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy import select
 
-from app.api.deps import AdminUser, AppSettings, DbSession, limit_admin_write, require_admin
+from app.api.deps import (
+    AdminUser,
+    AppSettings,
+    DbSession,
+    limit_admin_write,
+    require_admin,
+    require_listing_access,
+)
 from app.core.config import Settings
 from app.core.media import image_url
 from app.core.storage import ObjectStorage, get_storage
@@ -18,7 +25,7 @@ from app.services.telegram_publisher import ChannelPublisher, get_publisher
 router = APIRouter(
     prefix="/admin/apartments/{apartment_id}",
     tags=["admin", "telegram"],
-    dependencies=[Depends(require_admin)],
+    dependencies=[Depends(require_admin), Depends(require_listing_access)],
 )
 Storage = Annotated[ObjectStorage, Depends(get_storage)]
 Publisher = Annotated[ChannelPublisher, Depends(get_publisher)]

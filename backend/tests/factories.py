@@ -46,7 +46,7 @@ def sign_init_data(
 
 
 async def make_user(db: AsyncSession, telegram_user_id: int, **kwargs: Any) -> User:
-    user = User(telegram_user_id=telegram_user_id, role=UserRole.USER, **kwargs)
+    user = User(telegram_user_id=telegram_user_id, **{"role": UserRole.USER, **kwargs})
     db.add(user)
     await db.commit()
     return user
