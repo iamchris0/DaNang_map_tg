@@ -3,10 +3,10 @@
 A Telegram Mini App for browsing and managing long-term rental apartments in Da Nang:
 a map-based catalog for users and a mobile-friendly admin panel for channel administrators.
 
-> **Status: Phase 2 (Authentication & core API) of 6.** The backend now has Telegram
-> authentication, admin authorization, listing CRUD with the status lifecycle, and the
-> public catalog/map API. Next: the public map UI (Phase 3), the admin panel (Phase 4)
-> and channel publishing (Phase 5). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+> **Status: Phase 3 (Public frontend) of 6.** Users can browse listings on a map with
+> clustered price markers or in a list, filter them, open details, contact the agent or
+> administrator, and share deep links, in English or Russian, inside Telegram or in a
+> browser. Next: the admin panel (Phase 4) and channel publishing (Phase 5). See [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 
 ## Branches
 
@@ -19,12 +19,12 @@ a map-based catalog for users and a mobile-friendly admin panel for channel admi
 
 | Layer | Tech |
 |---|---|
-| Frontend | React 19, TypeScript (strict), Vite, Tailwind CSS 4, React Router, TanStack Query, i18next |
+| Frontend | React 19, TypeScript (strict), Vite, Tailwind CSS 4, React Router, TanStack Query, i18next, MapLibre GL JS + supercluster, Telegram Mini Apps script |
 | Backend | Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2 (async), Alembic, GeoAlchemy2 |
 | Data | PostgreSQL 17 + PostGIS 3.5, S3-compatible object storage (RustFS locally) |
 | Dev infra | Docker Compose |
 
-Planned for later phases: MapLibre GL JS, React Hook Form + Zod, Telegram Mini Apps SDK, aiogram.
+Planned for later phases: React Hook Form + Zod (admin forms), aiogram (channel publishing).
 
 ## Repository layout
 
@@ -132,6 +132,45 @@ curl -s -X POST localhost:8000/api/auth/dev -H 'Content-Type: application/json' 
 
 Image upload and Telegram publishing endpoints arrive in Phases 4 and 5.
 
+## Frontend (Phase 3)
+
+```
+frontend/src/
+  telegram/webapp.ts     Telegram WebApp wrapper (init, deep links, back button, links, share)
+  api/                   fetch client (bearer session), types, TanStack Query hooks
+  auth/                  Telegram initData → API session on launch
+  features/filters/      filter state in the URL (shared by map and list), filters sheet
+  features/map/          MapLibre map, HTML price markers + clustering, location preview
+  features/catalog/      header, map panel + preview sheet, list panel (infinite scroll)
+  features/apartment/    card, gallery, contact bar
+  pages/                 CatalogPage (/), ApartmentPage (/apartments/:id)
+  i18n/locales/          en.json, ru.json
+```
+
+- **Routes:** `/` (map; `?view=list` for the list) and `/apartments/:id`. Filters, view
+  and sort live in the query string, so links and reloads keep them.
+- **Deep links:** `https://t.me/<bot>/<app>?startapp=<listing-id>` opens that listing
+  (in a browser: `/?tgWebAppStartParam=<id>` or `/apartments/<id>`). Unknown ids show
+  "does not exist"; rented/archived show "no longer available".
+- **Telegram:** theme colours, viewport height and safe areas come from Telegram's CSS
+  variables. Telegram's own Back button is used on the details page, vertical swipes are
+  disabled so map panning doesn't minimise the app, contacts open via
+  `openTelegramLink`, and sharing uses Telegram's share sheet.
+- **Language:** a manual choice (saved locally and to the profile when signed in) wins,
+  then the Telegram user's language, then English.
+- **Map tiles:** `VITE_MAP_STYLE_URL` (default: OpenFreeMap). Approximate locations are
+  shown with a dashed "~" marker and an area circle, never a precise pin.
+
+### Testing inside Telegram
+
+1. Create a bot with @BotFather and a Mini App (`/newapp`). Put the short name in
+   `TELEGRAM_MINI_APP_SHORT_NAME`, and the bot token and username in `.env`.
+2. Expose the dev server over HTTPS, e.g. `cloudflared tunnel --url http://localhost:5173`,
+   and add the tunnel host to `VITE_ALLOWED_HOSTS`.
+3. Set the Mini App URL in @BotFather to the tunnel URL and open it from the bot.
+
+Phase 6 adds the production HTTPS setup.
+
 ## Running without Docker
 
 You still need a PostGIS-enabled PostgreSQL and an S3-compatible endpoint (e.g. start
@@ -170,7 +209,9 @@ TEST_DATABASE_URL=postgresql+asyncpg://danang:danang@localhost:5433/danang_test 
 
 # frontend
 cd frontend
-npm test
+npm test                              # Vitest + Testing Library (MapLibre faked in jsdom)
+npx playwright install chromium       # once
+npm run test:e2e                      # Playwright: real browser + real MapLibre, API mocked
 npm run lint
 npm run typecheck
 npm run format:check
@@ -194,7 +235,7 @@ All configuration is environment-based; see [.env.example](.env.example) for eve
 | Rate limits | `RATE_LIMIT_AUTH`, `RATE_LIMIT_ADMIN_WRITE` | Per IP for login, per admin for writes. |
 | Service area | `SERVICE_AREA_BBOX` | Listing coordinates must fall inside this box. |
 | Image storage | `S3_*` | Any S3-compatible provider. `S3_AUTO_CREATE_BUCKET` must be `false` in production. |
-| Map | _(Phase 3)_ | Tile style URL and geocoding provider will be configurable; public OSM tile servers are not used for production traffic. |
+| Map | `VITE_MAP_STYLE_URL` | MapLibre style JSON. Default OpenFreeMap (no key). For production traffic use a self-hosted style or a commercial provider; public OSM tile servers are never used. Geocoding for the admin location picker arrives in Phase 4. |
 
 Production safety checks run at startup when `ENVIRONMENT=production`.
 

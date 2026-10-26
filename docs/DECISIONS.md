@@ -116,3 +116,41 @@ Hoa Vang). This catches swapped latitude/longitude and mis-taps on the map picke
 The list view uses page/page_size with a total count, because the UI shows the number
 of matches anyway. The map endpoint requires a viewport `bbox` and returns at most 500
 lightweight markers (`truncated: true` beyond that). Clustering happens client-side.
+
+## D18. Telegram SDK
+
+The app uses Telegram's official `telegram-web-app.js` (loaded in `index.html`) with
+`@types/telegram-web-app` typings, behind a small wrapper in `src/telegram/webapp.ts`.
+It is the canonical Mini Apps API, always matches the current Telegram clients, and
+needs no extra npm dependency. All calls are version-gated (`isVersionAtLeast`) and are
+no-ops in a regular browser.
+
+## D19. Map markers
+
+Price labels are HTML elements (React portals into MapLibre markers), clustered client-
+side with `supercluster`. Markers are therefore real, focusable buttons with translated
+accessible names, and are easy to style (selected, approximate). The map endpoint caps
+results at 500, which HTML markers handle comfortably. Markers and data load without
+waiting for tiles. The map stays mounted when switching to the list, and the camera is
+restored when returning from a listing.
+
+## D20. Map tiles
+
+Default style: OpenFreeMap (`tiles.openfreemap.org/styles/liberty`), which is free, needs
+no key and uses OSM data. It is configurable with `VITE_MAP_STYLE_URL`. For production
+traffic, prefer a self-hosted style (e.g. OpenFreeMap or Protomaps on our own server) or
+a paid provider with an SLA. MapLibre's worker is loaded from an explicitly emitted asset
+(`setWorkerUrl`) so it works with Vite's pre-bundling and hashed builds.
+
+## D21. Catalog state in the URL
+
+Filters, view (map/list) and sort are query parameters (`?bedrooms=2&max_price=…`). Map
+and list therefore share one source of truth, filters survive reloads, and the browser
+or Telegram back button behaves predictably (`replace` navigation, so filter tweaks don't
+pile up history). API requests use filters debounced by 350 ms, and map viewports are
+rounded to ~100 m to reuse cached queries.
+
+## D22. Client session storage
+
+The API token from `/api/auth/telegram` lives in memory and `sessionStorage`: it survives
+a reload of the Mini App but not closing it. Public browsing never needs it.

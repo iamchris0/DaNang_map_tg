@@ -1,6 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
+import { getLanguageHint } from '@/telegram/webapp';
+
 import en from './locales/en.json';
 import ru from './locales/ru.json';
 
@@ -22,10 +24,11 @@ function readStoredLanguage(): Language | null {
   }
 }
 
-/**
- * Resolution order: manual choice (localStorage) → hint (Telegram user language, wired in
- * Phase 3) → English.
- */
+export function hasStoredLanguage(): boolean {
+  return readStoredLanguage() !== null;
+}
+
+/** Resolution order: manual choice (localStorage) → Telegram user language → English. */
 export function resolveInitialLanguage(hint?: string | null): Language {
   const stored = readStoredLanguage();
   if (stored) return stored;
@@ -44,13 +47,14 @@ export async function changeLanguage(language: Language): Promise<void> {
 
 void i18n.use(initReactI18next).init({
   resources: { en: { translation: en }, ru: { translation: ru } },
-  lng: resolveInitialLanguage(),
+  lng: resolveInitialLanguage(getLanguageHint()),
   fallbackLng: 'en',
   supportedLngs: SUPPORTED_LANGUAGES,
   interpolation: { escapeValue: false },
   returnNull: false,
 });
 
+document.documentElement.lang = i18n.language;
 i18n.on('languageChanged', (lng) => {
   document.documentElement.lang = lng;
 });

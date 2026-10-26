@@ -77,6 +77,8 @@ services:
     environment:
       VITE_PROXY_TARGET: http://backend:8000
       VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-}
+      VITE_USE_POLLING: "true"
+      VITE_MAP_STYLE_URL: ${VITE_MAP_STYLE_URL:-}
     volumes:
       - ./frontend:/app
       - frontend-node-modules:/app/node_modules

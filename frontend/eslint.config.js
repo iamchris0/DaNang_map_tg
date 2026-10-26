@@ -21,4 +21,8 @@ export default tseslint.config(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },
   },
+  {
+    files: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'e2e/**'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
+  },
 );

@@ -1,0 +1,178 @@
+import { act, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+import { installFakeApi } from '@/test/fakeApi';
+import { maps } from '@/test/fakeMaplibre';
+import { RIVER_2BR, SEA_VIEW, STUDIO } from '@/test/fixtures';
+import { renderApp } from '@/test/render';
+
+async function markerButtons() {
+  const map = await screen.findByRole('region', { name: 'Map of apartments in Da Nang' });
+  return within(map).findAllByRole('button', { pressed: false });
+}
+
+describe('map view', () => {
+  it('shows price markers for the viewport and the result count', async () => {
+    const api = installFakeApi();
+    renderApp('/');
+
+    expect(await screen.findByText('3 apartments in this area')).toBeInTheDocument();
+    const markers = await markerButtons();
+    expect(markers.map((m) => m.textContent)).toEqual(['12M ₫', '16.5M ₫', '~7.5M ₫']);
+    expect(markers[2]).toHaveAccessibleName('7.5M ₫, Studio, approximate location');
+    // The map query carries the current viewport.
+    expect(api.queries('/api/apartments/map')[0]?.get('bbox')).toBe('108,15.9,108.4,16.2');
+  });
+
+  it('opens a preview sheet for the selected marker and then the details page', async () => {
+    installFakeApi();
+    const user = userEvent.setup();
+    const { router } = renderApp('/');
+
+    await user.click(await screen.findByRole('button', { name: /^12M ₫/ }));
+
+    const sheet = await screen.findByRole('dialog', { name: SEA_VIEW.title });
+    expect(within(sheet).getByText('12,000,000 ₫')).toBeInTheDocument();
+    expect(within(sheet).getByText('Sơn Trà')).toBeInTheDocument();
+    expect(within(sheet).getByText('1 bedroom')).toBeInTheDocument();
+    expect(within(sheet).getByText('45 m²')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^12M ₫/ })).toHaveAttribute('aria-pressed', 'true');
+
+    await user.click(within(sheet).getByRole('link', { name: 'View details' }));
+    expect(router.state.location.pathname).toBe(`/apartments/${SEA_VIEW.id}`);
+    expect(await screen.findByRole('heading', { level: 1, name: SEA_VIEW.title })).toBeVisible();
+  });
+
+  it('closes the preview when the map background is tapped', async () => {
+    installFakeApi();
+    const user = userEvent.setup();
+    renderApp('/');
+    await user.click(await screen.findByRole('button', { name: /^12M ₫/ }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+
+    act(() => {
+      maps[0]?.fire('click', { originalEvent: { target: maps[0].canvasContainer } });
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('filters', () => {
+  it('filter changes update the URL and both map and list results', async () => {
+    const api = installFakeApi();
+    const user = userEvent.setup();
+    const { router } = renderApp('/');
+    await screen.findByText('3 apartments in this area');
+
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Filters' });
+    await user.click(within(sheet).getByRole('button', { name: '2' }));
+    // First "Max" field is the monthly rent (in millions).
+    await user.type(within(sheet).getAllByLabelText('Max', { selector: 'input' })[0]!, '20');
+
+    expect(router.state.location.search).toBe('?bedrooms=2&max_price=20000000');
+    expect(
+      await within(sheet).findByRole('button', { name: 'Show 1 apartment' }),
+    ).toBeInTheDocument();
+    await user.click(within(sheet).getByRole('button', { name: 'Show 1 apartment' }));
+
+    expect(await screen.findByText('1 apartment in this area')).toBeInTheDocument();
+    expect((await markerButtons()).map((m) => m.textContent)).toEqual(['16.5M ₫']);
+    const lastMapQuery = api.queries('/api/apartments/map').at(-1);
+    expect(lastMapQuery?.getAll('bedrooms')).toEqual(['2']);
+    expect(lastMapQuery?.get('max_price')).toBe('20000000');
+    expect(screen.getByRole('button', { name: 'Filters, 2 active' })).toBeInTheDocument();
+
+    // The list view shares the same filters.
+    await user.click(screen.getByRole('tab', { name: 'List' }));
+    expect(await screen.findByText('1 apartment')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: new RegExp(RIVER_2BR.title) })).toBeInTheDocument();
+    expect(screen.queryByText(SEA_VIEW.title)).not.toBeInTheDocument();
+  });
+
+  it('debounces rapid filter edits into a single request', async () => {
+    const api = installFakeApi();
+    const user = userEvent.setup();
+    renderApp('/?view=list');
+    await screen.findByText('3 apartments');
+    const before = api.queries('/api/apartments').filter((q) => q.get('page_size') === '20').length;
+
+    await user.click(screen.getByRole('button', { name: 'Filters' }));
+    await user.type(screen.getAllByLabelText('Min', { selector: 'input' })[0]!, '12.5');
+    await user.click(screen.getByRole('button', { name: /^Show/ }));
+
+    await screen.findByText('1 apartment');
+    const listQueries = api
+      .queries('/api/apartments')
+      .filter((q) => q.get('page_size') === '20')
+      .slice(before);
+    expect(listQueries.map((q) => q.get('min_price'))).toEqual(['12500000']);
+  });
+
+  it('shows an empty state with a reset action', async () => {
+    installFakeApi();
+    const user = userEvent.setup();
+    const { router } = renderApp('/?view=list&min_price=90000000');
+
+    expect(await screen.findByText('No apartments match your filters.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
+    expect(router.state.location.search).toBe('?view=list');
+    expect(await screen.findByText('3 apartments')).toBeInTheDocument();
+  });
+});
+
+describe('list view', () => {
+  it('renders cards and loads further pages', async () => {
+    const many = Array.from({ length: 25 }, (_, i) => ({
+      ...STUDIO,
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      title: `Listing ${i + 1}`,
+    }));
+    installFakeApi({ apartments: many });
+    const user = userEvent.setup();
+    renderApp('/?view=list');
+
+    expect(await screen.findByText('25 apartments')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(20);
+    const card = screen.getByRole('link', { name: /Listing 1\b/ });
+    expect(within(card).getByText('Available')).toBeInTheDocument();
+    expect(within(card).getByText('Studio')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Loading more…' }));
+    await waitFor(() => {
+      expect(screen.getAllByRole('listitem')).toHaveLength(25);
+    });
+    expect(screen.getByText("That's everything.")).toBeInTheDocument();
+  });
+
+  it('changes sorting through the URL', async () => {
+    const api = installFakeApi();
+    const user = userEvent.setup();
+    const { router } = renderApp('/?view=list');
+    await screen.findByText('3 apartments');
+
+    await user.selectOptions(screen.getByRole('combobox'), 'price_asc');
+    expect(router.state.location.search).toBe('?view=list&sort=price_asc');
+    await waitFor(() => {
+      expect(api.queries('/api/apartments').at(-1)?.get('sort')).toBe('price_asc');
+    });
+  });
+});
+
+describe('language', () => {
+  it('switches the interface to Russian and remembers the choice', async () => {
+    installFakeApi();
+    const user = userEvent.setup();
+    renderApp('/');
+    await screen.findByText('3 apartments in this area');
+
+    await user.click(screen.getByRole('button', { name: 'Русский' }));
+
+    expect(await screen.findByText('3 квартиры в этой области')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Список' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^12\sмлн ₫/ })).toBeInTheDocument();
+    expect(localStorage.getItem('dna.language')).toBe('ru');
+  });
+});
