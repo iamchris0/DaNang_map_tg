@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens map onto Telegram's theme CSS variables (set by the Mini App SDK in Phase 3),
+ * falling back to our own light/dark palette in a regular browser.
+ */
+:root {
+  --app-bg: var(--tg-theme-bg-color, #ffffff);
+  --app-surface: var(--tg-theme-secondary-bg-color, #f2f3f5);
+  --app-text: var(--tg-theme-text-color, #111418);
+  --app-hint: var(--tg-theme-hint-color, #6b7280);
+  --app-accent: var(--tg-theme-button-color, #2481cc);
+  --app-accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --app-danger: var(--tg-theme-destructive-text-color, #d93025);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: var(--tg-theme-bg-color, #17212b);
+    --app-surface: var(--tg-theme-secondary-bg-color, #232e3c);
+    --app-text: var(--tg-theme-text-color, #f5f5f5);
+    --app-hint: var(--tg-theme-hint-color, #8b9bab);
+    --app-accent: var(--tg-theme-button-color, #5288c1);
+    --app-danger: var(--tg-theme-destructive-text-color, #ec3942);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--app-bg);
+  --color-surface: var(--app-surface);
+  --color-fg: var(--app-text);
+  --color-hint: var(--app-hint);
+  --color-accent: var(--app-accent);
+  --color-accent-fg: var(--app-accent-text);
+  --color-danger: var(--app-danger);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}

@@ -1,0 +1,89 @@
+# Local development stack. See README.md for usage.
+name: danang-apartments
+
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-danang}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-danang}
+      POSTGRES_DB: ${POSTGRES_DB:-danang}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/db/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  storage:
+    # S3-compatible object storage for development (see docs/DECISIONS.md, D1).
+    image: rustfs/rustfs:1.0.1
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY_ID:-devaccesskey}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_ACCESS_KEY:-devsecretkey}
+      RUSTFS_CONSOLE_ENABLE: "true"
+    volumes:
+      - storage-data:/data
+    ports:
+      - "${S3_PORT:-9000}:9000"
+      - "${S3_CONSOLE_PORT:-9001}:9001"
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        INSTALL_DEV: "true"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-danang}:${POSTGRES_PASSWORD:-danang}@db:5432/${POSTGRES_DB:-danang}
+      TEST_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-danang}:${POSTGRES_PASSWORD:-danang}@db:5432/${POSTGRES_DB:-danang}_test
+      S3_ENDPOINT_URL: http://storage:9000
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-devaccesskey}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-devsecretkey}
+      S3_AUTO_CREATE_BUCKET: "true"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./backend:/app
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      storage:
+        condition: service_started
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-}
+    volumes:
+      - ./frontend:/app
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  storage-data:
+  frontend-node-modules:

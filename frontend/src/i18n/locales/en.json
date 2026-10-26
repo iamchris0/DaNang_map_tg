@@ -1,0 +1,32 @@
+{
+  "app": {
+    "name": "Da Nang Apartments",
+    "tagline": "Long-term rentals on the map"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "ru": "Русский"
+  },
+  "home": {
+    "comingSoon": "The apartment map is under construction."
+  },
+  "status": {
+    "title": "System status",
+    "checking": "Checking…",
+    "ok": "Operational",
+    "error": "Unavailable",
+    "unreachable": "The server cannot be reached.",
+    "retry": "Retry",
+    "components": {
+      "api": "API",
+      "database": "Database",
+      "postgis": "PostGIS",
+      "storage": "Image storage"
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "back": "Back to home"
+  }
+}
