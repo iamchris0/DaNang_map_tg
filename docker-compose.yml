@@ -3,7 +3,8 @@ name: danang-apartments
 
 services:
   db:
-    image: postgis/postgis:17-3.5
+    # Multi-arch (amd64 + arm64) build of the official PostGIS image; postgis/postgis is amd64-only.
+    image: imresamu/postgis:17-3.5-bookworm
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-danang}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-danang}

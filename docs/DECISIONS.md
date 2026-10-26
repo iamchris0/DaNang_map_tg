@@ -62,3 +62,9 @@ every authentication (Phase 2).
 
 Python 3.13 in Docker (spec requires 3.12+). Dependencies are declared in
 `backend/pyproject.toml`; plain `pip` is used so no extra tool is required.
+
+## D10. PostGIS image
+
+`postgis/postgis` publishes amd64 images only. Compose uses `imresamu/postgis`
+(same Dockerfiles, built for amd64 and arm64 by a docker-postgis maintainer) so the
+stack runs natively on Apple Silicon and ARM servers.
