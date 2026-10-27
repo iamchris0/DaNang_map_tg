@@ -1,5 +1,13 @@
 # Single entry point: HTTPS (automatic certificates when SITE_ADDRESS is a domain),
 # the built Mini App, the API and listing photos.
+{
+	servers {
+		# Behind a Cloudflare tunnel (or another proxy on the private network) keep the
+		# visitor's real address in X-Forwarded-For, so rate limits apply per visitor.
+		trusted_proxies static private_ranges
+	}
+}
+
 {$SITE_ADDRESS} {
 	encode zstd gzip
 

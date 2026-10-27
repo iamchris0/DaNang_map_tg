@@ -1,0 +1,27 @@
+# Run the production stack behind a Cloudflare tunnel: no public ports on the server (useful
+# when 80/443 are taken or there is no domain yet). Use together with docker-compose.prod.yml:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.tunnel.yml --env-file .env.production up -d --build
+# By default a free "quick tunnel" gives a random https://….trycloudflare.com address that
+# changes whenever the tunnel restarts (deploy/quick-tunnel-url.sh prints it). For a permanent
+# address on your own domain, create a tunnel in the Cloudflare dashboard (public hostname →
+# http://web:80) and set CLOUDFLARE_TUNNEL_ARGS=run and CLOUDFLARE_TUNNEL_TOKEN=<its token>.
+services:
+  web:
+    environment:
+      # Plain HTTP inside the Docker network; Cloudflare terminates HTTPS.
+      SITE_ADDRESS: ":80"
+    ports: !reset []
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    command: tunnel ${CLOUDFLARE_TUNNEL_ARGS:---url http://web:80}
+    depends_on:
+      - web
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"

@@ -106,6 +106,30 @@ photo archive into the `storage-data` volume while the stack is stopped.
 
 Container logs rotate automatically (5 × 10 MB per service).
 
+## Behind a Cloudflare tunnel (no domain yet, or ports 80/443 taken)
+
+`docker-compose.tunnel.yml` removes the public ports and adds a `cloudflared` container that
+connects out to Cloudflare, so nothing else on the server is affected:
+
+```bash
+C="docker compose -f docker-compose.prod.yml -f docker-compose.tunnel.yml --env-file .env.production"
+$C up -d --build
+deploy/quick-tunnel-url.sh --apply   # prints the https://….trycloudflare.com address,
+                                     # writes it to PUBLIC_APP_URL and restarts backend + bot
+```
+
+Put the printed address into @BotFather (`/myapps` → your app → *Edit Web App URL*). A quick
+tunnel gets a **new address whenever it restarts** (server reboot, `up` recreating it): run
+`deploy/quick-tunnel-url.sh --apply` again and update BotFather. For a permanent address, add
+your domain to Cloudflare, create a tunnel in *Zero Trust → Networks → Tunnels* with the public
+hostname pointing to `http://web:80`, and set in `.env.production`:
+
+```
+CLOUDFLARE_TUNNEL_ARGS=run
+CLOUDFLARE_TUNNEL_TOKEN=<token from the dashboard>
+PUBLIC_APP_URL=https://<your hostname>
+```
+
 ## Testing inside Telegram before you have a server
 
 Run the production stack locally and expose it with a temporary HTTPS tunnel. The
