@@ -75,7 +75,16 @@ To remove the demo listings later, open each in the admin panel and delete it, o
 4. **Channel:** add the bot as an administrator with *Post messages*. To give subscribers a
    way into the catalog, pin a post with the link `https://t.me/<bot>/<short-name>`.
 
-## 5. Operate
+## 5. Releases
+
+- `develop` is the test branch, `main` is production. Every push runs the checks in
+  `.github/workflows/ci.yml` (backend lint/types/tests, frontend lint/types/tests/build,
+  browser tests).
+- To release: merge `develop` into `main` once CI is green, then on the server
+  `git pull && $C up -d --build` (see below). Migrations run automatically on backend start.
+- The server should always check out `main`.
+
+## 6. Operate
 
 ```bash
 C="docker compose -f docker-compose.prod.yml --env-file .env.production"
@@ -94,6 +103,8 @@ docker run --rm -v danang-apartments-prod_storage-data:/data -v "$PWD":/backup a
 
 Restore: `pg_restore -U danang -d danang --clean` inside the `db` container, and untar the
 photo archive into the `storage-data` volume while the stack is stopped.
+
+Container logs rotate automatically (5 × 10 MB per service).
 
 ## Testing inside Telegram before you have a server
 
