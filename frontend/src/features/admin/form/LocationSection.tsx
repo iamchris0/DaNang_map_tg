@@ -20,6 +20,8 @@ interface Props {
   register: UseFormRegister<ApartmentFormValues>;
   onPickResult: (result: GeocodeResult) => void;
   locationError: string | null;
+  /** Grid placement in the form. */
+  className?: string;
   precisionError: string | null;
 }
 
@@ -84,86 +86,93 @@ export function LocationSection({
   onPickResult,
   locationError,
   precisionError,
+  className = '',
 }: Props) {
   const { t } = useTranslation();
   const [fromSearch, setFromSearch] = useState(false);
   const precision = useWatch({ control, name: 'location_precision' });
 
   return (
-    <FormSection title={t('admin.form.sections.location')}>
-      <GeocodeSearch
-        onPick={(result) => {
-          setFromSearch(true);
-          onPickResult(result);
-        }}
-      />
-      <p className="text-hint text-sm">{t('admin.location.hint')}</p>
-      <Controller
-        control={control}
-        name="location"
-        render={({ field }) => (
-          <div className="space-y-2">
-            <Suspense fallback={<div className="bg-bg h-72 rounded-xl" />}>
-              <LocationPickerMap
-                value={field.value}
-                onChange={(value) => {
-                  setFromSearch(false);
-                  field.onChange(value);
-                }}
-              />
-            </Suspense>
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <span data-testid="coordinates" className="text-hint">
-                {field.value
-                  ? `${field.value.latitude.toFixed(5)}, ${field.value.longitude.toFixed(5)}`
-                  : t('admin.location.noPin')}
-              </span>
-              {field.value && (
-                <button
-                  type="button"
-                  className="text-danger font-medium"
-                  onClick={() => {
-                    field.onChange(null);
-                  }}
-                >
-                  {t('admin.location.clear')}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      />
-      {locationError && <p className="text-danger text-sm">{locationError}</p>}
-      {fromSearch && <p className="text-sm text-amber-600">{t('admin.location.fromSearch')}</p>}
-
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-medium">{t('admin.location.precision')}</legend>
-        <div className="grid grid-cols-2 gap-2">
-          {(['exact', 'approximate'] as const).map((value) => (
-            <label
-              key={value}
-              className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${
-                precision === value
-                  ? 'border-fg shadow-[inset_0_0_0_1px_var(--app-text)]'
-                  : 'border-line'
-              }`}
-            >
-              <input
-                type="radio"
-                value={value}
-                className="size-4 accent-[var(--app-text)]"
-                {...register('location_precision')}
-              />
-              {t(`admin.location.${value}`)}
-            </label>
-          ))}
+    <FormSection title={t('admin.form.sections.location')} className={className}>
+      {/* Phones: search, map, then precision and address. Desktop: map on the left. */}
+      <div className="grid gap-4 lg:grid-cols-[7fr_5fr] lg:grid-rows-[auto_1fr] lg:gap-x-6">
+        <div className="space-y-2 lg:col-start-2 lg:row-start-1">
+          <GeocodeSearch
+            onPick={(result) => {
+              setFromSearch(true);
+              onPickResult(result);
+            }}
+          />
+          <p className="text-hint text-sm">{t('admin.location.hint')}</p>
+          {fromSearch && <p className="text-sm text-amber-600">{t('admin.location.fromSearch')}</p>}
         </div>
-        {precision === 'approximate' && (
-          <p className="text-hint text-sm">{t('admin.location.approximateHint')}</p>
-        )}
-        {precisionError && <p className="text-danger text-sm">{precisionError}</p>}
-      </fieldset>
-      {address}
+        <Controller
+          control={control}
+          name="location"
+          render={({ field }) => (
+            <div className="space-y-2 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+              <Suspense fallback={<div className="bg-bg h-72 rounded-xl lg:h-96" />}>
+                <LocationPickerMap
+                  value={field.value}
+                  onChange={(value) => {
+                    setFromSearch(false);
+                    field.onChange(value);
+                  }}
+                />
+              </Suspense>
+              <div className="flex items-center justify-between gap-2 text-sm">
+                <span data-testid="coordinates" className="text-hint">
+                  {field.value
+                    ? `${field.value.latitude.toFixed(5)}, ${field.value.longitude.toFixed(5)}`
+                    : t('admin.location.noPin')}
+                </span>
+                {field.value && (
+                  <button
+                    type="button"
+                    className="text-danger font-medium"
+                    onClick={() => {
+                      field.onChange(null);
+                    }}
+                  >
+                    {t('admin.location.clear')}
+                  </button>
+                )}
+              </div>
+              {locationError && <p className="text-danger text-sm">{locationError}</p>}
+            </div>
+          )}
+        />
+        <div className="space-y-4 lg:col-start-2 lg:row-start-2">
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm font-semibold">{t('admin.location.precision')}</legend>
+            <div className="grid grid-cols-2 gap-2">
+              {(['exact', 'approximate'] as const).map((value) => (
+                <label
+                  key={value}
+                  className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 text-sm font-semibold ${
+                    precision === value
+                      ? 'border-fg shadow-[inset_0_0_0_1px_var(--app-text)]'
+                      : 'border-line'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value={value}
+                    className="size-4 accent-[var(--app-text)]"
+                    {...register('location_precision')}
+                  />
+                  {t(`admin.location.${value}`)}
+                </label>
+              ))}
+            </div>
+            {precision === 'approximate' && (
+              <p className="text-hint text-sm">{t('admin.location.approximateHint')}</p>
+            )}
+            {precisionError && <p className="text-danger text-sm">{precisionError}</p>}
+          </fieldset>
+          {address}
+        </div>
+      </div>
     </FormSection>
   );
 }

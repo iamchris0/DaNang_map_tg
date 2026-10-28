@@ -6,12 +6,15 @@ import { amenityLabel, categoryLabel } from './labels';
 interface Props {
   value: readonly string[];
   onChange: (value: string[]) => void;
-  /** Two columns where there is room (the admin form); one in narrow dropdowns. */
-  columns?: 1 | 2;
+  /**
+   * `form`: categories side by side on wide screens (one column of items each), two columns
+   * of items on phones. `list`: one column, for narrow dropdowns.
+   */
+  layout?: 'form' | 'list';
 }
 
 /** Amenities as checkboxes, one group per category. Several can be selected. */
-export function AmenityCheckboxes({ value, onChange, columns = 2 }: Props) {
+export function AmenityCheckboxes({ value, onChange, layout = 'form' }: Props) {
   const { t } = useTranslation();
   const selected = new Set(value);
   const toggle = (key: string) => {
@@ -19,17 +22,23 @@ export function AmenityCheckboxes({ value, onChange, columns = 2 }: Props) {
   };
 
   return (
-    <div className="space-y-5">
+    <div
+      className={
+        layout === 'form'
+          ? 'grid gap-x-6 gap-y-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+          : 'space-y-5'
+      }
+    >
       {AMENITY_CATEGORIES.map(({ category, items }) => (
-        <fieldset key={category} className="space-y-2">
+        <fieldset key={category}>
           <legend className="text-hint mb-2 text-xs font-semibold tracking-wide uppercase">
             {categoryLabel(t, category)}
           </legend>
-          <div className={`grid gap-x-4 gap-y-1 ${columns === 2 ? 'sm:grid-cols-2' : ''}`}>
+          <div className={`grid gap-x-3 ${layout === 'form' ? 'grid-cols-2 sm:grid-cols-1' : ''}`}>
             {items.map((key) => (
               <label
                 key={key}
-                className="hover:bg-surface flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2"
+                className="hover:bg-surface flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 text-sm sm:text-base"
               >
                 <input
                   type="checkbox"

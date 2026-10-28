@@ -55,6 +55,7 @@ known-first-party = ["app", "tests"]
 "alembic/versions/**" = ["E501"]
 # Russian bot texts mix Cyrillic with Latin names ("Telegram", "/role").
 "app/bot/handlers.py" = ["RUF001"]
+"app/core/amenities.py" = ["RUF001"]
 
 [tool.mypy]
 python_version = "3.12"

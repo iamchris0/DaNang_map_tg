@@ -29,7 +29,7 @@ export function AmenitiesSection({ control }: { control: Control<ApartmentFormVa
     <div className="space-y-6">
       <AmenityCheckboxes value={amenities.field.value} onChange={amenities.field.onChange} />
 
-      <div className="space-y-2">
+      <div className="space-y-2 lg:max-w-2xl">
         <label htmlFor="custom-amenity" className="block text-sm font-semibold">
           {t('admin.form.customAmenities')}
         </label>

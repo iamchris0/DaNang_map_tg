@@ -41,7 +41,7 @@ export function PhotoTiles({ tiles, reserved = 0, busy = false, onMove, onRemove
 
   return (
     <div className="space-y-2">
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5 2xl:grid-cols-6">
         {tiles.map((tile, index) => (
           <li key={tile.key} className="border-line bg-bg overflow-hidden rounded-xl border">
             <div className="relative">

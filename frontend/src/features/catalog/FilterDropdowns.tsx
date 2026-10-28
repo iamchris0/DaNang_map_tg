@@ -199,7 +199,7 @@ export function FilterDropdowns({ filters, onChange }: Props) {
             <p className="text-hint text-sm">{t('filters.amenitiesHint')}</p>
             <AmenityCheckboxes
               value={filters.amenities}
-              columns={1}
+              layout="list"
               onChange={(value) => {
                 set({ amenities: value });
               }}

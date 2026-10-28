@@ -5,6 +5,7 @@ import re
 from dataclasses import dataclass
 from decimal import Decimal
 
+from app.core.amenities import AMENITY_LABELS
 from app.core.config import Settings
 from app.core.media import listing_share_url
 from app.models import Apartment
@@ -29,6 +30,10 @@ _TEMPLATES: dict[Language, dict[str, str]] = {
         "minimum": "Minimum rental: {months} months",
         "minimum_one": "Minimum rental: 1 month",
         "link": "📲 View details and location",
+        "address": "🗺 Address: {address}",
+        "amenities": "✨ Amenities: {amenities}",
+        "conditions": "📋 Rental conditions:",
+        "more": "+{count} more",
     },
     Language.RU: {
         "rent": "💰 Аренда: {price} VND/мес.",
@@ -43,6 +48,10 @@ _TEMPLATES: dict[Language, dict[str, str]] = {
         "minimum": "Минимальный срок: {months} мес.",
         "minimum_one": "Минимальный срок: 1 мес.",
         "link": "📲 Подробнее и расположение",
+        "address": "🗺 Адрес: {address}",
+        "amenities": "✨ Удобства: {amenities}",
+        "conditions": "📋 Условия аренды:",
+        "more": "и ещё {count}",
     },
     Language.VI: {
         "rent": "💰 Giá thuê: {price} VND/tháng",
@@ -57,10 +66,16 @@ _TEMPLATES: dict[Language, dict[str, str]] = {
         "minimum": "Thời gian thuê tối thiểu: {months} tháng",
         "minimum_one": "Thời gian thuê tối thiểu: 1 tháng",
         "link": "📲 Xem chi tiết và vị trí",
+        "address": "🗺 Địa chỉ: {address}",
+        "amenities": "✨ Tiện ích: {amenities}",
+        "conditions": "📋 Điều kiện thuê:",
+        "more": "+{count} mục khác",
     },
 }
 
 _TAG_RE = re.compile(r"<[^>]+>")
+# Longer lists are cut with "+N more" so the post stays readable.
+MAX_POST_AMENITIES = 12
 
 
 def visible_length(markup: str) -> int:
@@ -125,12 +140,23 @@ def build_post(
         t["rent"].format(price=_money(apartment.price_vnd, lang)),
         t["district"].format(district=_esc(district)),
     ]
+    if apartment.address:
+        facts.append(t["address"].format(address=_esc(apartment.address)))
     if apartment.area_sqm is not None:
         facts.append(t["area"].format(area=_area(apartment.area_sqm)))
     bedrooms = t["studio"] if apartment.bedrooms == 0 else str(apartment.bedrooms)
     facts.append(t["bedrooms"].format(bedrooms=bedrooms))
     if apartment.bathrooms is not None:
         facts.append(t["bathrooms"].format(bathrooms=apartment.bathrooms))
+
+    names = [AMENITY_LABELS[lang.value][key] for key in apartment.amenities or []]
+    names += list(apartment.custom_amenities or [])
+    amenities = None
+    if names:
+        shown = names[:MAX_POST_AMENITIES]
+        if len(names) > len(shown):
+            shown.append(t["more"].format(count=len(names) - len(shown)))
+        amenities = t["amenities"].format(amenities=_esc(" · ".join(shown)))
 
     terms = []
     if apartment.deposit_vnd is not None:
@@ -148,21 +174,38 @@ def build_post(
     head = f"🏠 <b>{_esc(apartment.title or '')}</b>"
     tail = f'📲 <a href="{link}">{t["link"].removeprefix("📲 ")}</a>'
 
-    def assemble(description: str | None) -> str:
+    def assemble(description: str | None, conditions: str | None) -> str:
         blocks = [head, "\n".join(facts)]
         if description:
             blocks.append(_esc(description))
+        if amenities:
+            blocks.append(amenities)
         if terms:
             blocks.append("\n".join(terms))
+        if conditions:
+            blocks.append(f"{t['conditions']}\n{_esc(conditions)}")
         blocks.append(tail)
         return "\n\n".join(blocks)
 
     limit = CAPTION_LIMIT if with_media else MESSAGE_LIMIT
     description = (apartment.description or "").strip() or None
-    if description:
-        budget = limit - visible_length(assemble(None)) - 2  # the "\n\n" separator
-        description = _truncate(description, budget) if budget > 20 else None
-    markup = assemble(description)
+    conditions = (apartment.rental_conditions or "").strip() or None
+    if visible_length(assemble(description, conditions)) > limit:
+        # Too long: the conditions keep up to a third of the free space, the description
+        # takes what is left; both are cut at a word boundary with "…".
+        free = limit - visible_length(assemble(None, None))
+        if conditions:
+            overhead = (
+                visible_length(assemble(None, conditions))
+                - visible_length(assemble(None, None))
+                - _utf16_length(conditions)
+            )
+            cap = max(free // 3, free - _utf16_length(description or "") - 2) - overhead
+            conditions = _truncate(conditions, cap) if cap > 20 else None
+        if description:
+            budget = limit - visible_length(assemble(None, conditions)) - 2
+            description = _truncate(description, budget) if budget > 20 else None
+    markup = assemble(description, conditions)
     return TelegramPost(html=markup, length=visible_length(markup), limit=limit)
 
 

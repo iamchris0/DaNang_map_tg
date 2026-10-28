@@ -27,7 +27,7 @@ mobile and desktop viewports). "Manual" means checked by hand against the runnin
 | 19 | Data and images survive restarts | Named volumes; containers recreated many times during development with data intact | ✅ |
 | 20 | Works on mobile and desktop | Playwright `mobile` (Pixel 7) and `desktop` projects; manual checks at 375 px and desktop widths | ✅ |
 | 21 | Started with documented instructions | README (development), DEPLOYMENT.md (production) | ✅ |
-| 22 | Critical automated tests pass | Backend 249, Vitest 60, Playwright 10 | ✅ |
+| 22 | Critical automated tests pass | Backend 252, Vitest 60, Playwright 10 | ✅ |
 
 ## Remaining limitations
 

@@ -260,7 +260,7 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
     <form
       noValidate
       onSubmit={(event) => void onSubmit(event)}
-      className="mx-auto max-w-7xl space-y-4 px-4 pt-5 pb-[calc(6rem+var(--safe-bottom))] lg:px-10"
+      className="space-y-4 px-4 pt-5 pb-[calc(6rem+var(--safe-bottom))] lg:space-y-6 lg:px-8 xl:px-10"
     >
       <h2 className="text-2xl font-semibold">
         {isNew ? t('admin.form.newTitle') : t('admin.form.editTitle')}
@@ -273,16 +273,19 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
         </div>
       )}
 
-      {/* Desktop: two columns of tiles; phones: one column in reading order. */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-        <div className="space-y-4">
-          <FormSection title={t('admin.form.sections.basics')}>
-            <TextField
-              label={t('admin.form.title')}
-              placeholder={t('admin.form.titlePlaceholder')}
-              error={errors.title}
-              {...register('title')}
-            />
+      {/*
+        Desktop: full width, cards in rows of equal height (12-column grid). Phones: one
+        column in reading order, short fields in pairs.
+      */}
+      <div className="grid gap-4 lg:grid-cols-12 lg:gap-6">
+        <FormSection title={t('admin.form.sections.basics')} className="lg:col-span-6">
+          <TextField
+            label={t('admin.form.title')}
+            placeholder={t('admin.form.titlePlaceholder')}
+            error={errors.title}
+            {...register('title')}
+          />
+          <div className="grid grid-cols-2 items-start gap-3">
             <TextField
               label={t('admin.form.price')}
               inputMode="numeric"
@@ -295,198 +298,203 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
                 setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
               })}
             />
-            <SelectField
-              label={t('admin.form.district')}
-              error={errors.district_id}
-              options={[
-                { value: '', label: t('admin.form.choose') },
-                ...(districts.data ?? []).map((d) => ({
-                  value: String(d.id),
-                  label: districtName(d, language),
-                })),
-              ]}
-              {...register('district_id')}
-            />
-            <div className="grid grid-cols-2 items-end gap-3">
-              <SelectField
-                label={t('admin.form.bedrooms')}
-                error={errors.bedrooms}
-                options={roomOptions(true)}
-                {...register('bedrooms')}
-              />
-              <SelectField
-                label={t('admin.form.bathrooms')}
-                error={errors.bathrooms}
-                options={roomOptions(false)}
-                {...register('bathrooms')}
-              />
-            </div>
             <TextField
               label={t('admin.form.area')}
               inputMode="decimal"
               error={errors.area}
               {...register('area')}
             />
-          </FormSection>
-
-          <LocationSection
-            control={control}
-            register={register}
-            address={
-              <TextField
-                label={t('admin.form.address')}
-                error={errors.address}
-                {...register('address')}
-              />
-            }
-            locationError={errorText(errors.location?.message)}
-            precisionError={errorText(errors.location_precision?.message)}
-            onPickResult={(result) => {
-              setValue(
-                'location',
-                { latitude: result.latitude, longitude: result.longitude },
-                { shouldDirty: true },
-              );
-              // A searched place (often a street or district) is never claimed to be exact.
-              setValue('location_precision', 'approximate', { shouldDirty: true });
-            }}
+          </div>
+          <SelectField
+            label={t('admin.form.district')}
+            error={errors.district_id}
+            options={[
+              { value: '', label: t('admin.form.choose') },
+              ...(districts.data ?? []).map((d) => ({
+                value: String(d.id),
+                label: districtName(d, language),
+              })),
+            ]}
+            {...register('district_id')}
           />
-
-          <FormSection title={t('admin.form.sections.photos')}>
-            <PhotoEditor
-              photos={photos}
-              onChange={setPhotos}
-              progress={uploadProgress}
-              busy={isSubmitting}
+          <div className="grid grid-cols-2 items-start gap-3">
+            <SelectField
+              label={t('admin.form.bedrooms')}
+              error={errors.bedrooms}
+              options={roomOptions(true)}
+              {...register('bedrooms')}
             />
-          </FormSection>
-        </div>
-        <div className="space-y-4">
-          <FormSection title={t('admin.form.sections.terms')}>
-            <div className="space-y-2">
-              <span id="deposit-mode" className="block text-sm font-semibold">
-                {t('admin.form.depositLabel')}
-              </span>
-              <div
-                role="radiogroup"
-                aria-labelledby="deposit-mode"
-                className="bg-surface grid grid-cols-2 gap-1 rounded-xl p-1"
-              >
-                {(['amount', 'months'] as const).map((mode) => (
-                  <label
-                    key={mode}
-                    className={`flex min-h-10 cursor-pointer items-center justify-center rounded-lg px-2 text-center text-sm font-semibold transition-colors has-[:focus-visible]:outline-2 ${
-                      depositMode === mode ? 'bg-fg text-bg' : 'text-hint hover:text-fg'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      value={mode}
-                      className="sr-only"
-                      {...register('deposit_mode')}
-                    />
-                    {t(`admin.form.depositModes.${mode}`)}
-                  </label>
-                ))}
-              </div>
-              {depositMode === 'amount' ? (
-                <TextField
-                  key="amount"
-                  label={t('admin.form.deposit')}
-                  inputMode="numeric"
-                  error={errors.deposit}
-                  {...register('deposit', {
-                    setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
-                  })}
-                />
-              ) : (
-                <TextField
-                  key="months"
-                  label={t('admin.form.depositMonths')}
-                  inputMode="numeric"
-                  error={errors.deposit_months}
-                  hint={
-                    price && /^\d+$/.test(price) && /^\d+$/.test(depositMonths)
-                      ? `= ${formatPriceFull(Number(price) * Number(depositMonths), language)}`
-                      : undefined
-                  }
-                  {...register('deposit_months')}
-                />
-              )}
+            <SelectField
+              label={t('admin.form.bathrooms')}
+              error={errors.bathrooms}
+              options={roomOptions(false)}
+              {...register('bathrooms')}
+            />
+          </div>
+        </FormSection>
+
+        <FormSection title={t('admin.form.sections.terms')} className="lg:col-span-6">
+          <div className="space-y-2">
+            <span id="deposit-mode" className="block text-sm font-semibold">
+              {t('admin.form.depositLabel')}
+            </span>
+            <div
+              role="radiogroup"
+              aria-labelledby="deposit-mode"
+              className="bg-surface grid grid-cols-2 gap-1 rounded-xl p-1"
+            >
+              {(['amount', 'months'] as const).map((mode) => (
+                <label
+                  key={mode}
+                  className={`flex min-h-10 cursor-pointer items-center justify-center rounded-lg px-2 text-center text-sm font-semibold transition-colors has-[:focus-visible]:outline-2 ${
+                    depositMode === mode ? 'bg-fg text-bg' : 'text-hint hover:text-fg'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    value={mode}
+                    className="sr-only"
+                    {...register('deposit_mode')}
+                  />
+                  {t(`admin.form.depositModes.${mode}`)}
+                </label>
+              ))}
             </div>
+          </div>
+          <div className="grid items-start gap-3 sm:grid-cols-2">
+            {depositMode === 'amount' ? (
+              <TextField
+                key="amount"
+                label={t('admin.form.deposit')}
+                inputMode="numeric"
+                error={errors.deposit}
+                {...register('deposit', {
+                  setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
+                })}
+              />
+            ) : (
+              <TextField
+                key="months"
+                label={t('admin.form.depositMonths')}
+                inputMode="numeric"
+                error={errors.deposit_months}
+                hint={
+                  price && /^\d+$/.test(price) && /^\d+$/.test(depositMonths)
+                    ? `= ${formatPriceFull(Number(price) * Number(depositMonths), language)}`
+                    : undefined
+                }
+                {...register('deposit_months')}
+              />
+            )}
             <TextField
               label={t('admin.form.minMonths')}
               inputMode="numeric"
               error={errors.minimum_rental_months}
               {...register('minimum_rental_months')}
             />
-            <TextAreaField
-              label={t('admin.form.conditions')}
-              error={errors.rental_conditions}
-              {...register('rental_conditions')}
+          </div>
+          <TextAreaField
+            label={t('admin.form.conditions')}
+            grow
+            error={errors.rental_conditions}
+            {...register('rental_conditions')}
+          />
+        </FormSection>
+
+        <FormSection title={t('admin.form.sections.photos')} className="lg:col-span-12">
+          <PhotoEditor
+            photos={photos}
+            onChange={setPhotos}
+            progress={uploadProgress}
+            busy={isSubmitting}
+          />
+        </FormSection>
+
+        <LocationSection
+          className="lg:col-span-12"
+          control={control}
+          register={register}
+          address={
+            <TextField
+              label={t('admin.form.address')}
+              error={errors.address}
+              {...register('address')}
             />
-          </FormSection>
+          }
+          locationError={errorText(errors.location?.message)}
+          precisionError={errorText(errors.location_precision?.message)}
+          onPickResult={(result) => {
+            setValue(
+              'location',
+              { latitude: result.latitude, longitude: result.longitude },
+              { shouldDirty: true },
+            );
+            // A searched place (often a street or district) is never claimed to be exact.
+            setValue('location_precision', 'approximate', { shouldDirty: true });
+          }}
+        />
 
-          <FormSection title={t('admin.form.sections.amenities')}>
-            <AmenitiesSection control={control} />
-          </FormSection>
+        <FormSection title={t('admin.form.sections.amenities')} className="lg:col-span-12">
+          <AmenitiesSection control={control} />
+        </FormSection>
 
-          <FormSection title={t('admin.form.sections.details')}>
-            <TextAreaField
-              label={t('admin.form.description')}
-              rows={6}
-              error={errors.description}
-              {...register('description')}
+        <FormSection title={t('admin.form.sections.details')} className="lg:col-span-7">
+          <TextAreaField
+            label={t('admin.form.description')}
+            rows={6}
+            grow
+            error={errors.description}
+            {...register('description')}
+          />
+        </FormSection>
+
+        <FormSection title={t('admin.form.sections.contact')} className="lg:col-span-5">
+          <SelectField
+            label={t('admin.form.contactType')}
+            error={errors.agent_contact_type}
+            options={[
+              { value: '', label: t('admin.form.contactNone') },
+              ...(['telegram_username', 'telegram_link', 'phone'] as const).map((type) => ({
+                value: type,
+                label: t(`admin.form.contactTypes.${type}`),
+              })),
+            ]}
+            {...register('agent_contact_type')}
+          />
+          {contactType && (
+            <TextField
+              label={t('admin.form.contactValue')}
+              placeholder={t(`admin.form.contactPlaceholders.${contactType}`)}
+              autoCapitalize="off"
+              autoCorrect="off"
+              error={errors.agent_contact_value}
+              {...register('agent_contact_value')}
             />
-          </FormSection>
+          )}
+          <p className="text-hint text-sm">{t('admin.form.adminContactNote')}</p>
+        </FormSection>
+      </div>
 
-          <FormSection title={t('admin.form.sections.contact')}>
-            <SelectField
-              label={t('admin.form.contactType')}
-              error={errors.agent_contact_type}
-              options={[
-                { value: '', label: t('admin.form.contactNone') },
-                ...(['telegram_username', 'telegram_link', 'phone'] as const).map((type) => ({
-                  value: type,
-                  label: t(`admin.form.contactTypes.${type}`),
-                })),
-              ]}
-              {...register('agent_contact_type')}
-            />
-            {contactType && (
-              <TextField
-                label={t('admin.form.contactValue')}
-                placeholder={t(`admin.form.contactPlaceholders.${contactType}`)}
-                autoCapitalize="off"
-                autoCorrect="off"
-                error={errors.agent_contact_value}
-                {...register('agent_contact_value')}
-              />
-            )}
-            <p className="text-hint text-sm">{t('admin.form.adminContactNote')}</p>
-          </FormSection>
-
+      {/* Actions stay in reach: delete (existing listings) next to save. */}
+      <div className="border-line bg-bg fixed inset-x-0 bottom-0 z-10 border-t px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))] lg:px-8 xl:px-10">
+        <div className="flex items-center gap-3 lg:justify-end">
           {apartment.data && (
             <button
               type="button"
               onClick={() => {
                 setConfirmDelete(true);
               }}
-              className="text-danger flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-semibold"
+              aria-label={t('admin.form.delete')}
+              className="border-line text-danger hover:border-danger flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl border px-3.5 font-semibold lg:px-5"
             >
               <TrashIcon />
-              {t('admin.form.delete')}
+              <span className="hidden lg:inline">{t('admin.form.delete')}</span>
             </button>
           )}
-        </div>
-      </div>
-
-      <div className="border-line bg-bg fixed inset-x-0 bottom-0 z-10 border-t px-4 pt-3 pb-[calc(0.75rem+var(--safe-bottom))]">
-        <div className="mx-auto max-w-7xl lg:flex lg:justify-end lg:px-6">
           <button
             type="submit"
             disabled={isSubmitting || (!isNew && !isDirty)}
-            className="bg-accent text-accent-fg min-h-12 w-full rounded-xl font-semibold disabled:opacity-50 lg:w-80"
+            className="bg-accent text-accent-fg min-h-12 flex-1 rounded-xl px-6 font-semibold disabled:opacity-50 lg:w-80 lg:flex-none"
           >
             {uploading
               ? t('admin.photos.uploadingProgress', uploading)

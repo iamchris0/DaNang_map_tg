@@ -19,15 +19,16 @@ interface FieldShellProps {
   label: string;
   error: FieldError | undefined;
   hint?: ReactNode;
+  className?: string;
   children: (ids: { id: string; describedBy: string | undefined }) => ReactNode;
 }
 
-function FieldShell({ label, error, hint, children }: FieldShellProps) {
+function FieldShell({ label, error, hint, className = '', children }: FieldShellProps) {
   const id = useId();
   const message = useErrorText(error);
   const describedBy = message ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return (
-    <div className="space-y-1">
+    <div className={`space-y-1 ${className}`}>
       <label htmlFor={id} className="block text-sm leading-tight font-semibold">
         {label}
       </label>
@@ -72,18 +73,20 @@ export function TextField({ label, error, hint, className = '', ...props }: Inpu
 type TextAreaProps = ComponentProps<'textarea'> & {
   label: string;
   error: FieldError | undefined;
+  grow?: boolean;
 };
 
-export function TextAreaField({ label, error, ...props }: TextAreaProps) {
+/** `grow`: fill the rest of the section, so cards side by side end at the same height. */
+export function TextAreaField({ label, error, grow = false, ...props }: TextAreaProps) {
   return (
-    <FieldShell label={label} error={error}>
+    <FieldShell label={label} error={error} className={grow ? 'flex flex-1 flex-col' : ''}>
       {({ id, describedBy }) => (
         <textarea
           id={id}
           rows={4}
           aria-invalid={Boolean(error)}
           aria-describedby={describedBy}
-          className={`${CONTROL} py-3`}
+          className={`${CONTROL} py-3 ${grow ? 'min-h-28 flex-1 resize-none' : ''}`}
           {...props}
         />
       )}
@@ -120,9 +123,18 @@ export function SelectField({ label, error, options, ...props }: SelectProps) {
   );
 }
 
-export function FormSection({ title, children }: { title: string; children: ReactNode }) {
+interface FormSectionProps {
+  title: string;
+  children: ReactNode;
+  /** Grid placement, e.g. `lg:col-span-6`. Sections stretch to the height of their row. */
+  className?: string;
+}
+
+export function FormSection({ title, children, className = '' }: FormSectionProps) {
   return (
-    <section className="border-line bg-bg space-y-4 rounded-2xl border p-4 lg:p-6">
+    <section
+      className={`border-line bg-bg flex flex-col gap-4 rounded-2xl border p-4 lg:p-6 ${className}`}
+    >
       <h2 className="text-lg font-semibold">{title}</h2>
       {children}
     </section>

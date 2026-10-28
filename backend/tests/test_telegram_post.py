@@ -13,6 +13,7 @@ from aiogram.methods import SendMessage
 from pydantic import SecretStr
 
 from app.bot.handlers import start_reply
+from app.core.amenities import AMENITIES, AMENITY_LABELS
 from app.core.config import Settings
 from app.models import Apartment, District
 from app.models.enums import Language, PublicationStatus
@@ -92,6 +93,53 @@ def test_deposit_in_months() -> None:
         with_media=True,
     )
     assert "Депозит: 1 мес. аренды" in ru.html
+
+
+def test_post_includes_address_amenities_and_conditions() -> None:
+    post = build_post(
+        _settings(),
+        _apartment(
+            address="12 An Thuong 2",
+            amenities=["air_conditioning", "wifi", "pool"],
+            custom_amenities=["Rooftop BBQ"],
+            rental_conditions="No smoking. Pets on request.",
+        ),
+        with_media=True,
+    )
+    assert "🗺 Address: 12 An Thuong 2" in post.html
+    assert "✨ Amenities: Air conditioning · Wi-Fi · Swimming pool · Rooftop BBQ" in post.html
+    assert "📋 Rental conditions:\nNo smoking. Pets on request." in post.html
+    # Order: facts, description, amenities, terms, conditions, link.
+    assert (
+        post.html.index("Fully furnished")
+        < post.html.index("✨")
+        < post.html.index("Deposit")
+        < post.html.index("📋")
+        < post.html.index("📲")
+    )
+
+    many = build_post(
+        _settings(telegram_post_language="ru"),
+        _apartment(amenities=list(AMENITIES)),
+        with_media=True,
+    )
+    assert f"и ещё {len(AMENITIES) - 12}" in many.html
+
+
+def test_long_description_and_conditions_both_fit() -> None:
+    post = build_post(
+        _settings(),
+        _apartment(description="Sunny flat. " * 200, rental_conditions="Quiet hours. " * 200),
+        with_media=True,
+    )
+    assert post.length <= CAPTION_LIMIT
+    assert "Sunny flat." in post.html and "Quiet hours." in post.html
+    assert post.html.count("…") == 2
+
+
+def test_every_amenity_has_a_post_label_in_every_language() -> None:
+    for language in Language:
+        assert set(AMENITY_LABELS[language.value]) == set(AMENITIES)
 
 
 def test_russian_post_and_optional_fields() -> None:

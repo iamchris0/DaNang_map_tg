@@ -104,7 +104,7 @@ export default function LocationPickerMap({ value, onChange }: Props) {
       role="application"
       aria-label={t('admin.location.mapLabel')}
       data-testid="location-picker"
-      className="bg-bg h-72 w-full overflow-hidden rounded-xl"
+      className="bg-bg h-72 w-full overflow-hidden rounded-xl lg:h-96"
     />
   );
 }
