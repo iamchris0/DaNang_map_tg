@@ -114,6 +114,11 @@ async def update(
     image_count = await _image_count(db, apartment.id)
     for name, value in values.items():
         setattr(apartment, name, value)
+    # Switching between "amount" and "months" clears the other form.
+    if values.get("deposit_vnd") is not None:
+        apartment.deposit_months = None
+    elif values.get("deposit_months") is not None:
+        apartment.deposit_vnd = None
     # Public (or previously public) listings must stay complete.
     if apartment.status is not ApartmentStatus.DRAFT:
         missing = missing_publish_fields(apartment, image_count)

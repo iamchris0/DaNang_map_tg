@@ -105,7 +105,9 @@
     "monthShort": "tháng",
     "about": "Giới thiệu",
     "whereYoullLive": "Nơi bạn sẽ ở",
-    "terms": "Điều khoản thuê"
+    "terms": "Điều khoản thuê",
+    "amenities": "Tiện ích",
+    "depositMonths_other": "{{count}} tháng tiền thuê"
   },
   "filters": {
     "title": "Bộ lọc",
@@ -123,12 +125,14 @@
       "price": "Giá",
       "bedrooms": "Phòng ngủ",
       "district": "Quận",
-      "area": "Diện tích"
+      "area": "Diện tích",
+      "amenities": "Tiện ích"
     },
     "clear": "Xóa",
     "clearAll": "Xóa tất cả",
     "priceHint": "Giá thuê hàng tháng, triệu ₫",
-    "areaHint": "Diện tích tính bằng m²"
+    "areaHint": "Diện tích tính bằng m²",
+    "amenitiesHint": "Hiển thị căn hộ có tất cả tiện ích đã chọn"
   },
   "notFound": {
     "title": "Không tìm thấy trang",
@@ -210,7 +214,8 @@
         "photos": "Ảnh",
         "terms": "Điều khoản thuê",
         "details": "Mô tả",
-        "contact": "Liên hệ môi giới hoặc chủ nhà"
+        "contact": "Liên hệ môi giới hoặc chủ nhà",
+        "amenities": "Tiện ích"
       },
       "title": "Tiêu đề",
       "titlePlaceholder": "VD: Căn 1 phòng ngủ gần biển Mỹ Khê",
@@ -262,7 +267,18 @@
         "longitude": "vị trí",
         "location_precision": "độ chính xác vị trí",
         "images": "một ảnh"
-      }
+      },
+      "depositLabel": "Đặt cọc",
+      "depositModes": {
+        "amount": "Số tiền cố định",
+        "months": "Số tháng tiền thuê"
+      },
+      "depositMonths": "Đặt cọc, số tháng tiền thuê",
+      "customAmenities": "Tiện ích riêng của bạn",
+      "customAmenityPlaceholder": "VD: BBQ trên sân thượng",
+      "addAmenity": "Thêm",
+      "removeAmenity": "Xóa {{name}}",
+      "customAmenityHint": "Tối đa {{max}} mục, mỗi mục {{length}} ký tự. Hiển thị trong mục “Khác”."
     },
     "location": {
       "search": "Tìm địa chỉ hoặc địa danh",
@@ -395,5 +411,47 @@
     "phone": "Nhập số điện thoại hợp lệ",
     "oneDecimal": "Tối đa một chữ số thập phân",
     "invalid": "Giá trị không hợp lệ"
+  },
+  "amenities": {
+    "title": "Tiện ích",
+    "other": "Khác",
+    "categories": {
+      "comfort": "Tiện nghi",
+      "kitchen": "Nhà bếp",
+      "building": "Tòa nhà & dịch vụ",
+      "outdoor": "Cảnh quan & ngoài trời",
+      "rules": "Quy định & chi phí"
+    },
+    "items": {
+      "furnished": "Đầy đủ nội thất",
+      "air_conditioning": "Điều hòa",
+      "water_heater": "Bình nóng lạnh",
+      "washing_machine": "Máy giặt",
+      "dryer": "Máy sấy",
+      "wifi": "Wi-Fi",
+      "tv": "TV",
+      "workspace": "Góc làm việc",
+      "kitchen": "Bếp đầy đủ",
+      "refrigerator": "Tủ lạnh",
+      "stove": "Bếp nấu",
+      "microwave": "Lò vi sóng",
+      "oven": "Lò nướng",
+      "elevator": "Thang máy",
+      "security": "Bảo vệ 24/7",
+      "pool": "Hồ bơi",
+      "gym": "Phòng gym",
+      "car_parking": "Chỗ đậu ô tô",
+      "motorbike_parking": "Chỗ để xe máy",
+      "cleaning_service": "Dịch vụ dọn dẹp",
+      "balcony": "Ban công",
+      "terrace": "Sân thượng",
+      "garden": "Sân vườn",
+      "sea_view": "View biển",
+      "river_view": "View sông",
+      "mountain_view": "View núi",
+      "pets_allowed": "Cho phép thú cưng",
+      "smoking_allowed": "Cho phép hút thuốc",
+      "utilities_included": "Đã bao gồm điện nước"
+    }
   }
 }

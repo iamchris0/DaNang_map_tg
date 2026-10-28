@@ -24,6 +24,8 @@ _TEMPLATES: dict[Language, dict[str, str]] = {
         "studio": "Studio",
         "bathrooms": "🛁 Bathrooms: {bathrooms}",
         "deposit": "Deposit: {deposit} VND",
+        "deposit_months": "Deposit: {months} months' rent",
+        "deposit_months_one": "Deposit: 1 month's rent",
         "minimum": "Minimum rental: {months} months",
         "minimum_one": "Minimum rental: 1 month",
         "link": "📲 View details and location",
@@ -36,6 +38,8 @@ _TEMPLATES: dict[Language, dict[str, str]] = {
         "studio": "студия",
         "bathrooms": "🛁 Санузлы: {bathrooms}",
         "deposit": "Депозит: {deposit} VND",
+        "deposit_months": "Депозит: {months} мес. аренды",
+        "deposit_months_one": "Депозит: 1 мес. аренды",
         "minimum": "Минимальный срок: {months} мес.",
         "minimum_one": "Минимальный срок: 1 мес.",
         "link": "📲 Подробнее и расположение",
@@ -48,6 +52,8 @@ _TEMPLATES: dict[Language, dict[str, str]] = {
         "studio": "Studio",
         "bathrooms": "🛁 Phòng tắm: {bathrooms}",
         "deposit": "Đặt cọc: {deposit} VND",
+        "deposit_months": "Đặt cọc: {months} tháng tiền thuê",
+        "deposit_months_one": "Đặt cọc: 1 tháng tiền thuê",
         "minimum": "Thời gian thuê tối thiểu: {months} tháng",
         "minimum_one": "Thời gian thuê tối thiểu: 1 tháng",
         "link": "📲 Xem chi tiết và vị trí",
@@ -129,6 +135,11 @@ def build_post(
     terms = []
     if apartment.deposit_vnd is not None:
         terms.append(t["deposit"].format(deposit=_money(apartment.deposit_vnd, lang)))
+    elif apartment.deposit_months is not None:
+        months = apartment.deposit_months
+        terms.append(
+            t["deposit_months_one"] if months == 1 else t["deposit_months"].format(months=months)
+        )
     if apartment.minimum_rental_months is not None:
         months = apartment.minimum_rental_months
         terms.append(t["minimum_one"] if months == 1 else t["minimum"].format(months=months))

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useApartmentCount, useDistricts } from '@/api/catalog';
 import { Chip } from '@/components/ui/Chip';
 import { Dropdown } from '@/components/ui/Dropdown';
+import { AmenityCheckboxes } from '@/features/amenities/AmenityCheckboxes';
 import { NumberInput } from '@/components/ui/NumberInput';
 import {
   activeFilterCount,
@@ -13,7 +14,13 @@ import {
 import { districtName } from '@/lib/format';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
 
-import { areaSummary, bedroomsSummary, districtSummary, priceSummary } from './filterSummary';
+import {
+  amenitiesSummary,
+  areaSummary,
+  bedroomsSummary,
+  districtSummary,
+  priceSummary,
+} from './filterSummary';
 
 const MILLION = 1_000_000;
 const toMillions = (vnd: number | null) => (vnd === null ? null : vnd / MILLION);
@@ -67,6 +74,7 @@ export function FilterDropdowns({ filters, onChange }: Props) {
   const rooms = bedroomsSummary(t, filters);
   const district = districtSummary(t, filters, districts.data, language);
   const area = areaSummary(filters);
+  const amenities = amenitiesSummary(t, filters);
 
   return (
     <div className="flex items-center gap-2">
@@ -177,6 +185,26 @@ export function FilterDropdowns({ filters, onChange }: Props) {
               />
             </div>
           </fieldset>
+        )}
+      </Dropdown>
+
+      <Dropdown
+        label={amenities ?? t('filters.categories.amenities')}
+        title={t('filters.categories.amenities')}
+        active={amenities !== null}
+        footer={footer({ amenities: [] })}
+      >
+        {() => (
+          <div className="space-y-3">
+            <p className="text-hint text-sm">{t('filters.amenitiesHint')}</p>
+            <AmenityCheckboxes
+              value={filters.amenities}
+              columns={1}
+              onChange={(value) => {
+                set({ amenities: value });
+              }}
+            />
+          </div>
         )}
       </Dropdown>
 

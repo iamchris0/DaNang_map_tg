@@ -245,6 +245,38 @@ describe('listing form', () => {
     });
   });
 
+  it('sets amenities, own amenities and a deposit in months', async () => {
+    const api = installFakeAdminApi([{ ...COMPLETE }]);
+    const user = userEvent.setup();
+    renderApp('/admin/apartments/00000000-0000-4000-8000-000000000001');
+    const title = await screen.findByLabelText('Title');
+    await waitFor(() => {
+      expect(title).toHaveValue('Sea view 1BR');
+    });
+
+    await user.click(screen.getByRole('radio', { name: 'Months of rent' }));
+    await user.type(screen.getByLabelText('Deposit, months of rent'), '2');
+    expect(screen.getByText('= 24,000,000 ₫')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Swimming pool' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Wi-Fi' }));
+    const own = screen.getByLabelText('Your own amenities');
+    await user.type(own, 'Rooftop BBQ{Enter}'); // Enter adds, it doesn't submit the form
+    await user.type(own, 'Sauna');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Remove Sauna' }));
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Changes saved')).toBeInTheDocument();
+    const patch = api.requests.find((r) => r.method === 'PATCH' && !r.path.endsWith('/status'));
+    expect(patch?.body).toMatchObject({
+      deposit_vnd: null,
+      deposit_months: 2,
+      amenities: ['wifi', 'pool'],
+      custom_amenities: ['Rooftop BBQ'],
+    });
+  });
+
   it('validates fields before sending', async () => {
     const api = installFakeAdminApi();
     const user = userEvent.setup();

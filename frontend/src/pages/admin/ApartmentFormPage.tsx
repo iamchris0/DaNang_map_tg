@@ -22,6 +22,7 @@ import { TrashIcon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/components/ui/toastContext';
 import { adminErrorMessage, missingFieldsLabel } from '@/features/admin/errors';
+import { AmenitiesSection } from '@/features/admin/form/AmenitiesSection';
 import { FormSection, SelectField, TextAreaField, TextField } from '@/features/admin/form/fields';
 import { LocationSection } from '@/features/admin/form/LocationSection';
 import {
@@ -227,6 +228,8 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
 
   const price = useWatch({ control, name: 'price' });
   const contactType = useWatch({ control, name: 'agent_contact_type' });
+  const depositMode = useWatch({ control, name: 'deposit_mode' });
+  const depositMonths = useWatch({ control, name: 'deposit_months' });
 
   if (!isNew && apartment.isPending) {
     return (
@@ -360,27 +363,72 @@ function ApartmentFormPage({ id }: { id: string | undefined }) {
         </div>
         <div className="space-y-4">
           <FormSection title={t('admin.form.sections.terms')}>
-            <div className="grid grid-cols-2 items-end gap-3">
-              <TextField
-                label={t('admin.form.deposit')}
-                inputMode="numeric"
-                error={errors.deposit}
-                {...register('deposit', {
-                  setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
-                })}
-              />
-              <TextField
-                label={t('admin.form.minMonths')}
-                inputMode="numeric"
-                error={errors.minimum_rental_months}
-                {...register('minimum_rental_months')}
-              />
+            <div className="space-y-2">
+              <span id="deposit-mode" className="block text-sm font-semibold">
+                {t('admin.form.depositLabel')}
+              </span>
+              <div
+                role="radiogroup"
+                aria-labelledby="deposit-mode"
+                className="bg-surface grid grid-cols-2 gap-1 rounded-xl p-1"
+              >
+                {(['amount', 'months'] as const).map((mode) => (
+                  <label
+                    key={mode}
+                    className={`flex min-h-10 cursor-pointer items-center justify-center rounded-lg px-2 text-center text-sm font-semibold transition-colors has-[:focus-visible]:outline-2 ${
+                      depositMode === mode ? 'bg-fg text-bg' : 'text-hint hover:text-fg'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      value={mode}
+                      className="sr-only"
+                      {...register('deposit_mode')}
+                    />
+                    {t(`admin.form.depositModes.${mode}`)}
+                  </label>
+                ))}
+              </div>
+              {depositMode === 'amount' ? (
+                <TextField
+                  key="amount"
+                  label={t('admin.form.deposit')}
+                  inputMode="numeric"
+                  error={errors.deposit}
+                  {...register('deposit', {
+                    setValueAs: (value: string) => value.replace(/[^\d]/g, ''),
+                  })}
+                />
+              ) : (
+                <TextField
+                  key="months"
+                  label={t('admin.form.depositMonths')}
+                  inputMode="numeric"
+                  error={errors.deposit_months}
+                  hint={
+                    price && /^\d+$/.test(price) && /^\d+$/.test(depositMonths)
+                      ? `= ${formatPriceFull(Number(price) * Number(depositMonths), language)}`
+                      : undefined
+                  }
+                  {...register('deposit_months')}
+                />
+              )}
             </div>
+            <TextField
+              label={t('admin.form.minMonths')}
+              inputMode="numeric"
+              error={errors.minimum_rental_months}
+              {...register('minimum_rental_months')}
+            />
             <TextAreaField
               label={t('admin.form.conditions')}
               error={errors.rental_conditions}
               {...register('rental_conditions')}
             />
+          </FormSection>
+
+          <FormSection title={t('admin.form.sections.amenities')}>
+            <AmenitiesSection control={control} />
           </FormSection>
 
           <FormSection title={t('admin.form.sections.details')}>

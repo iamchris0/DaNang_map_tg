@@ -3,8 +3,15 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Self
 
-from pydantic import Field, StringConstraints, model_validator
+from pydantic import Field, StringConstraints, field_validator, model_validator
 
+from app.core.amenities import (
+    CUSTOM_AMENITY_MAX_LENGTH,
+    MAX_CUSTOM_AMENITIES,
+    UnknownAmenityError,
+    normalize_amenities,
+    normalize_custom_amenities,
+)
 from app.core.contacts import ContactError, normalize_contact
 from app.models.enums import ApartmentStatus, ContactType, LocationPrecision, PublicationStatus
 from app.schemas.common import DistrictOut, ImageOut, Schema
@@ -14,6 +21,7 @@ MAX_VND = 100_000_000_000  # 100 billion VND; far above any monthly rent
 Title = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
 LongText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
 Address = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
+CustomAmenity = Annotated[str, StringConstraints(max_length=CUSTOM_AMENITY_MAX_LENGTH)]
 ContactValue = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=256)
 ]
@@ -33,14 +41,36 @@ class ApartmentFields(Schema):
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
     location_precision: LocationPrecision | None = None
+    # A fixed amount or a number of months' rent, not both.
     deposit_vnd: int | None = Field(default=None, ge=0, le=MAX_VND)
+    deposit_months: int | None = Field(default=None, ge=1, le=12)
     minimum_rental_months: int | None = Field(default=None, ge=1, le=120)
     rental_conditions: LongText | None = None
+    # Keys from app.core.amenities; null clears the list.
+    amenities: list[str] | None = Field(default=None, max_length=100)
+    custom_amenities: list[CustomAmenity] | None = Field(
+        default=None, max_length=MAX_CUSTOM_AMENITIES
+    )
     agent_contact_type: ContactType | None = None
     agent_contact_value: ContactValue | None = None
 
+    @field_validator("amenities")
+    @classmethod
+    def _known_amenities(cls, value: list[str] | None) -> list[str]:
+        try:
+            return normalize_amenities(value or [])
+        except UnknownAmenityError as exc:
+            raise ValueError(str(exc)) from exc
+
+    @field_validator("custom_amenities")
+    @classmethod
+    def _clean_custom_amenities(cls, value: list[str] | None) -> list[str]:
+        return normalize_custom_amenities(value or [])
+
     @model_validator(mode="after")
     def _check_pairs(self) -> Self:
+        if self.deposit_vnd is not None and self.deposit_months is not None:
+            raise ValueError("Give the deposit as an amount or in months, not both")
         # For PATCH payloads only the fields actually sent are compared.
         sent = self.model_fields_set
         for first, second in (
@@ -96,8 +126,11 @@ class AdminApartmentOut(Schema):
     longitude: float | None
     location_precision: LocationPrecision | None
     deposit_vnd: int | None
+    deposit_months: int | None
     minimum_rental_months: int | None
     rental_conditions: str | None
+    amenities: list[str]
+    custom_amenities: list[str]
     agent_contact_type: ContactType | None
     agent_contact_value: str | None
     images: list[ImageOut]
@@ -152,8 +185,11 @@ class PublicApartmentDetail(PublicApartmentCard):
     latitude: float
     longitude: float
     deposit_vnd: int | None
+    deposit_months: int | None
     minimum_rental_months: int | None
     rental_conditions: str | None
+    amenities: list[str]
+    custom_amenities: list[str]
     images: list[ImageOut]
     agent_contact: ContactOut | None
     admin_contact: ContactOut | None

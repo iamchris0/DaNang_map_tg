@@ -20,6 +20,7 @@ from sqlalchemy import (
     Uuid,
     text,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, TimestampMixin
@@ -72,9 +73,18 @@ class Apartment(TimestampMixin, Base):
         str_enum(LocationPrecision, "location_precision")
     )
 
+    # The deposit is either a fixed amount or a number of months' rent (at most one is set).
     deposit_vnd: Mapped[int | None] = mapped_column(BigInteger)
+    deposit_months: Mapped[int | None] = mapped_column(SmallInteger)
     minimum_rental_months: Mapped[int | None] = mapped_column(SmallInteger)
     rental_conditions: Mapped[str | None] = mapped_column(Text)
+    # Keys from app.core.amenities (filterable) and the landlord's own free-text additions.
+    amenities: Mapped[list[str]] = mapped_column(
+        ARRAY(String(32)), nullable=False, default=list, server_default=text("'{}'")
+    )
+    custom_amenities: Mapped[list[str]] = mapped_column(
+        ARRAY(String(60)), nullable=False, default=list, server_default=text("'{}'")
+    )
 
     agent_contact_type: Mapped[ContactType | None] = mapped_column(
         str_enum(ContactType, "contact_type")
@@ -115,6 +125,10 @@ class Apartment(TimestampMixin, Base):
         ),
         CheckConstraint("price_vnd > 0", name="price_positive"),
         CheckConstraint("deposit_vnd >= 0", name="deposit_non_negative"),
+        CheckConstraint("deposit_months BETWEEN 1 AND 12", name="deposit_months_range"),
+        CheckConstraint(
+            "deposit_vnd IS NULL OR deposit_months IS NULL", name="deposit_single_form"
+        ),
         CheckConstraint("area_sqm > 0", name="area_positive"),
         CheckConstraint("bedrooms BETWEEN 0 AND 20", name="bedrooms_range"),
         CheckConstraint("bathrooms BETWEEN 0 AND 20", name="bathrooms_range"),
@@ -127,6 +141,8 @@ class Apartment(TimestampMixin, Base):
             name="agent_contact_paired",
         ),
         Index("ix_apartments_location", "location", postgresql_using="gist"),
+        # Catalog filter "has all of these amenities" (amenities @> ARRAY[...]).
+        Index("ix_apartments_amenities", "amenities", postgresql_using="gin"),
         # Public catalog queries: live rows filtered by status and price.
         Index(
             "ix_apartments_status_price",

@@ -1,8 +1,8 @@
-import { act, screen, within } from '@testing-library/react';
+import { act, cleanup, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { installFakeApi } from '@/test/fakeApi';
-import { ALL_APARTMENTS, SEA_VIEW, STUDIO } from '@/test/fixtures';
+import { ALL_APARTMENTS, RIVER_2BR, SEA_VIEW, STUDIO } from '@/test/fixtures';
 import { renderApp } from '@/test/render';
 import { installTelegram } from '@/test/telegram';
 
@@ -34,6 +34,22 @@ describe('apartment details', () => {
       '_blank',
       'noopener,noreferrer',
     );
+  });
+
+  it("shows amenities by category, the landlord's own ones and a deposit in months", async () => {
+    installFakeApi();
+    renderApp(`/apartments/${SEA_VIEW.id}`);
+    const amenities = (await screen.findByRole('heading', { name: 'Amenities' })).parentElement!;
+    for (const text of ['Comfort', 'Air conditioning', 'Building & services', 'Swimming pool']) {
+      expect(within(amenities).getByText(text)).toBeInTheDocument();
+    }
+    expect(within(amenities).getByText('Other')).toBeInTheDocument();
+    expect(within(amenities).getByText('Rooftop BBQ')).toBeInTheDocument();
+
+    cleanup();
+    renderApp(`/apartments/${RIVER_2BR.id}`);
+    const facts = (await screen.findByRole('heading', { name: 'Key facts' })).parentElement!;
+    expect(within(facts).getByText("2 months' rent (33,000,000 ₫)")).toBeInTheDocument();
   });
 
   it('hides missing optional fields and explains a missing agent contact', async () => {

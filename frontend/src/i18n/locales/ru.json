@@ -138,7 +138,12 @@
     "monthShort": "мес.",
     "about": "Об этом жилье",
     "whereYoullLive": "Где вы будете жить",
-    "terms": "Условия аренды"
+    "terms": "Условия аренды",
+    "amenities": "Удобства",
+    "depositMonths_one": "{{count}} месяц аренды",
+    "depositMonths_few": "{{count}} месяца аренды",
+    "depositMonths_many": "{{count}} месяцев аренды",
+    "depositMonths_other": "{{count}} месяца аренды"
   },
   "filters": {
     "title": "Фильтры",
@@ -159,12 +164,14 @@
       "price": "Цена",
       "bedrooms": "Спальни",
       "district": "Район",
-      "area": "Площадь"
+      "area": "Площадь",
+      "amenities": "Удобства"
     },
     "clear": "Очистить",
     "clearAll": "Сбросить всё",
     "priceHint": "Аренда в месяц, млн ₫",
-    "areaHint": "Площадь, м²"
+    "areaHint": "Площадь, м²",
+    "amenitiesHint": "Показать квартиры, где есть всё выбранное"
   },
   "notFound": {
     "title": "Страница не найдена",
@@ -246,7 +253,8 @@
         "photos": "Фотографии",
         "terms": "Условия аренды",
         "details": "Описание",
-        "contact": "Контакт агента или владельца"
+        "contact": "Контакт агента или владельца",
+        "amenities": "Удобства"
       },
       "title": "Название",
       "titlePlaceholder": "Например, 1BR рядом с пляжем Ми Кхе",
@@ -298,7 +306,18 @@
         "longitude": "расположение",
         "location_precision": "точность расположения",
         "images": "фото"
-      }
+      },
+      "depositLabel": "Депозит",
+      "depositModes": {
+        "amount": "Фиксированная сумма",
+        "months": "Месяцы аренды"
+      },
+      "depositMonths": "Депозит, месяцев аренды",
+      "customAmenities": "Свои удобства",
+      "customAmenityPlaceholder": "например, барбекю на крыше",
+      "addAmenity": "Добавить",
+      "removeAmenity": "Удалить «{{name}}»",
+      "customAmenityHint": "До {{max}} пунктов, по {{length}} символов. Показываются в разделе «Другое»."
     },
     "location": {
       "search": "Поиск адреса или места",
@@ -437,5 +456,47 @@
     "phone": "Введите корректный номер телефона",
     "oneDecimal": "Не более одного знака после запятой",
     "invalid": "Неверное значение"
+  },
+  "amenities": {
+    "title": "Удобства",
+    "other": "Другое",
+    "categories": {
+      "comfort": "Комфорт",
+      "kitchen": "Кухня",
+      "building": "Дом и сервис",
+      "outdoor": "Виды и открытые зоны",
+      "rules": "Правила и платежи"
+    },
+    "items": {
+      "furnished": "Мебель",
+      "air_conditioning": "Кондиционер",
+      "water_heater": "Водонагреватель",
+      "washing_machine": "Стиральная машина",
+      "dryer": "Сушильная машина",
+      "wifi": "Wi-Fi",
+      "tv": "Телевизор",
+      "workspace": "Рабочее место",
+      "kitchen": "Полноценная кухня",
+      "refrigerator": "Холодильник",
+      "stove": "Плита",
+      "microwave": "Микроволновка",
+      "oven": "Духовка",
+      "elevator": "Лифт",
+      "security": "Охрана 24/7",
+      "pool": "Бассейн",
+      "gym": "Спортзал",
+      "car_parking": "Парковка для авто",
+      "motorbike_parking": "Парковка для байка",
+      "cleaning_service": "Уборка",
+      "balcony": "Балкон",
+      "terrace": "Терраса",
+      "garden": "Сад",
+      "sea_view": "Вид на море",
+      "river_view": "Вид на реку",
+      "mountain_view": "Вид на горы",
+      "pets_allowed": "Можно с животными",
+      "smoking_allowed": "Можно курить",
+      "utilities_included": "Коммунальные услуги включены"
+    }
   }
 }

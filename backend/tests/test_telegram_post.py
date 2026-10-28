@@ -83,6 +83,17 @@ def test_vietnamese_post() -> None:
     assert post.html.endswith("Xem chi tiết và vị trí</a>")
 
 
+def test_deposit_in_months() -> None:
+    post = build_post(_settings(), _apartment(deposit_vnd=None, deposit_months=2), with_media=True)
+    assert "Deposit: 2 months' rent" in post.html
+    ru = build_post(
+        _settings(telegram_post_language="ru"),
+        _apartment(deposit_vnd=None, deposit_months=1),
+        with_media=True,
+    )
+    assert "Депозит: 1 мес. аренды" in ru.html
+
+
 def test_russian_post_and_optional_fields() -> None:
     post = build_post(
         _settings(telegram_post_language="ru"),

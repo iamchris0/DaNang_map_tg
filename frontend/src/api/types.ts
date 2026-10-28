@@ -53,8 +53,14 @@ export interface ApartmentDetail extends ApartmentCard {
   latitude: number;
   longitude: number;
   deposit_vnd: number | null;
+  /** Deposit as months of rent; at most one of deposit_vnd / deposit_months is set. */
+  deposit_months: number | null;
   minimum_rental_months: number | null;
   rental_conditions: string | null;
+  /** Keys from features/amenities/catalog.json. */
+  amenities: string[];
+  /** The landlord's own additions (free text). */
+  custom_amenities: string[];
   images: Image[];
   agent_contact: Contact | null;
   admin_contact: Contact | null;
@@ -122,8 +128,14 @@ export interface AdminApartment {
   longitude: number | null;
   location_precision: LocationPrecision | null;
   deposit_vnd: number | null;
+  /** Deposit as months of rent; at most one of deposit_vnd / deposit_months is set. */
+  deposit_months: number | null;
   minimum_rental_months: number | null;
   rental_conditions: string | null;
+  /** Keys from features/amenities/catalog.json. */
+  amenities: string[];
+  /** The landlord's own additions (free text). */
+  custom_amenities: string[];
   agent_contact_type: ContactType | null;
   agent_contact_value: string | null;
   images: Image[];
@@ -147,8 +159,14 @@ export interface ApartmentInput {
   longitude: number | null;
   location_precision: LocationPrecision | null;
   deposit_vnd: number | null;
+  /** Deposit as months of rent; at most one of deposit_vnd / deposit_months is set. */
+  deposit_months: number | null;
   minimum_rental_months: number | null;
   rental_conditions: string | null;
+  /** Keys from features/amenities/catalog.json. */
+  amenities: string[];
+  /** The landlord's own additions (free text). */
+  custom_amenities: string[];
   agent_contact_type: ContactType | null;
   agent_contact_value: string | null;
 }

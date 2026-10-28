@@ -42,6 +42,8 @@ def _public_conditions(
         conditions.append(Apartment.area_sqm >= filters.min_area)
     if filters.max_area is not None:
         conditions.append(Apartment.area_sqm <= filters.max_area)
+    if filters.amenities:
+        conditions.append(Apartment.amenities.contains(list(filters.amenities)))
     if filters.bbox is not None:
         box = filters.bbox
         envelope = func.ST_MakeEnvelope(box.min_lng, box.min_lat, box.max_lng, box.max_lat, 4326)

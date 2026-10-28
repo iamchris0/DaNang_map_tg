@@ -32,19 +32,27 @@ describe('filter URL state', () => {
       districts: [2, 1],
       minArea: 30,
       maxArea: null,
+      amenities: ['pool', 'wifi'],
     };
     const params = writeFilters(new URLSearchParams('view=list'), filters);
     expect(params.toString()).toBe(
-      'view=list&min_price=5000000&max_price=15000000&bedrooms=0%2C3&district=2%2C1&min_area=30',
+      'view=list&min_price=5000000&max_price=15000000&bedrooms=0%2C3&district=2%2C1&min_area=30&amenities=pool%2Cwifi',
     );
-    expect(parseFilters(params)).toEqual({ ...filters, districts: [1, 2] });
-    expect(activeFilterCount(filters)).toBe(4);
+    // Amenities come back in catalog order.
+    expect(parseFilters(params)).toEqual({
+      ...filters,
+      districts: [1, 2],
+      amenities: ['wifi', 'pool'],
+    });
+    expect(activeFilterCount(filters)).toBe(5);
   });
 
   it('ignores malformed values', () => {
-    expect(parseFilters(new URLSearchParams('min_price=abc&bedrooms=1,9,x,1&district=-3'))).toEqual(
-      { ...EMPTY_FILTERS, bedrooms: [1] },
-    );
+    expect(
+      parseFilters(
+        new URLSearchParams('min_price=abc&bedrooms=1,9,x,1&district=-3&amenities=jacuzzi,wifi'),
+      ),
+    ).toEqual({ ...EMPTY_FILTERS, bedrooms: [1], amenities: ['wifi'] });
   });
 });
 

@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 
 import type { District } from '@/api/types';
+import { amenityLabel } from '@/features/amenities/labels';
 import type { CatalogFilters } from '@/features/filters/filters';
 import { districtName, formatPriceCompact } from '@/lib/format';
 
@@ -34,6 +35,15 @@ export function districtSummary(
   if (names.length === 0) return null;
   if (names.length === 1) return names[0] ?? null;
   return t('catalog.districtsMore', { first: names[0], count: names.length - 1 });
+}
+
+export function amenitiesSummary(t: TFunction, filters: CatalogFilters) {
+  const [first, ...rest] = filters.amenities;
+  if (first === undefined) return null;
+  const label = amenityLabel(t, first);
+  return rest.length === 0
+    ? label
+    : t('catalog.districtsMore', { first: label, count: rest.length });
 }
 
 export function areaSummary(filters: CatalogFilters) {

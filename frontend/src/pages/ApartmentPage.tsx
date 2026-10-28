@@ -17,6 +17,7 @@ import {
   WalletIcon,
 } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
+import { AmenityList } from '@/features/apartment/AmenityList';
 import { ContactActions } from '@/features/apartment/ContactActions';
 import { Gallery } from '@/features/apartment/Gallery';
 import { roomsLabel } from '@/features/apartment/labels';
@@ -243,6 +244,13 @@ export function ApartmentPage() {
                     value={formatPriceFull(apartment.deposit_vnd, language)}
                   />
                 )}
+                {apartment.deposit_months !== null && (
+                  <Fact
+                    icon={<WalletIcon />}
+                    label={t('apartment.deposit')}
+                    value={`${t('apartment.depositMonths', { count: apartment.deposit_months })} (${formatPriceFull(apartment.price_vnd * apartment.deposit_months, language)})`}
+                  />
+                )}
                 {apartment.minimum_rental_months !== null && (
                   <Fact
                     icon={<CalendarIcon />}
@@ -256,6 +264,12 @@ export function ApartmentPage() {
             {apartment.description && (
               <Section title={t('apartment.description')}>
                 <p className="leading-relaxed whitespace-pre-line">{apartment.description}</p>
+              </Section>
+            )}
+
+            {(apartment.amenities.length > 0 || apartment.custom_amenities.length > 0) && (
+              <Section title={t('apartment.amenities')}>
+                <AmenityList amenities={apartment.amenities} custom={apartment.custom_amenities} />
               </Section>
             )}
 

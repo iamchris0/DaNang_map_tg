@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { AdminApartment, ApartmentInput, ContactType } from '@/api/types';
+import { CUSTOM_AMENITY_MAX_LENGTH, MAX_CUSTOM_AMENITIES } from '@/features/amenities/catalog';
 
 /**
  * Form model. Inputs are kept as strings while editing; `toInput` converts them to the API
@@ -53,9 +54,16 @@ export const apartmentSchema = z
     address: text(500),
     location: z.object({ latitude: z.number(), longitude: z.number() }).nullable(),
     location_precision: z.enum(['', 'exact', 'approximate']),
+    // The deposit is a fixed amount or a number of months' rent.
+    deposit_mode: z.enum(['amount', 'months']),
     deposit: wholeNumber(0, MAX_VND),
+    deposit_months: wholeNumber(1, 12),
     minimum_rental_months: wholeNumber(1, 120),
     rental_conditions: text(5000),
+    amenities: z.array(z.string()),
+    custom_amenities: z
+      .array(z.string().trim().max(CUSTOM_AMENITY_MAX_LENGTH, 'validation.tooLong'))
+      .max(MAX_CUSTOM_AMENITIES, 'validation.range'),
     agent_contact_type: z.enum(['', 'telegram_username', 'telegram_link', 'phone']),
     agent_contact_value: text(256),
   })
@@ -94,9 +102,13 @@ export const EMPTY_VALUES: ApartmentFormValues = {
   address: '',
   location: null,
   location_precision: '',
+  deposit_mode: 'amount',
   deposit: '',
+  deposit_months: '',
   minimum_rental_months: '',
   rental_conditions: '',
+  amenities: [],
+  custom_amenities: [],
   agent_contact_type: '',
   agent_contact_value: '',
 };
@@ -120,9 +132,13 @@ export function fromApartment(apartment: AdminApartment): ApartmentFormValues {
         ? { latitude: apartment.latitude, longitude: apartment.longitude }
         : null,
     location_precision: apartment.location_precision ?? '',
+    deposit_mode: apartment.deposit_months !== null ? 'months' : 'amount',
     deposit: str(apartment.deposit_vnd),
+    deposit_months: str(apartment.deposit_months),
     minimum_rental_months: str(apartment.minimum_rental_months),
     rental_conditions: apartment.rental_conditions ?? '',
+    amenities: [...apartment.amenities],
+    custom_amenities: [...apartment.custom_amenities],
     agent_contact_type: apartment.agent_contact_type ?? '',
     agent_contact_value: apartment.agent_contact_value ?? '',
   };
@@ -142,9 +158,12 @@ export function toInput(values: ApartmentFormValues): ApartmentInput {
     latitude: values.location?.latitude ?? null,
     longitude: values.location?.longitude ?? null,
     location_precision: values.location_precision || null,
-    deposit_vnd: intOrNull(values.deposit),
+    deposit_vnd: values.deposit_mode === 'amount' ? intOrNull(values.deposit) : null,
+    deposit_months: values.deposit_mode === 'months' ? intOrNull(values.deposit_months) : null,
     minimum_rental_months: intOrNull(values.minimum_rental_months),
     rental_conditions: orNull(values.rental_conditions),
+    amenities: values.amenities,
+    custom_amenities: values.custom_amenities,
     agent_contact_type: values.agent_contact_type || null,
     agent_contact_value: values.agent_contact_type ? orNull(values.agent_contact_value) : null,
   };
@@ -164,8 +183,11 @@ export const SERVER_FIELD_MAP: Record<string, keyof ApartmentFormValues> = {
   longitude: 'location',
   location_precision: 'location_precision',
   deposit_vnd: 'deposit',
+  deposit_months: 'deposit_months',
   minimum_rental_months: 'minimum_rental_months',
   rental_conditions: 'rental_conditions',
+  amenities: 'amenities',
+  custom_amenities: 'custom_amenities',
   agent_contact_type: 'agent_contact_type',
   agent_contact_value: 'agent_contact_value',
 };

@@ -29,6 +29,9 @@ function apartment(overrides: Partial<ApartmentDetail> & { id: string }): Apartm
     latitude: 16.0612,
     longitude: 108.2475,
     deposit_vnd: 12_000_000,
+    deposit_months: null,
+    amenities: ['furnished', 'air_conditioning', 'wifi', 'pool', 'sea_view'],
+    custom_amenities: ['Rooftop BBQ'],
     minimum_rental_months: 6,
     rental_conditions: 'No smoking',
     images: [
@@ -64,6 +67,10 @@ export const RIVER_2BR = apartment({
   district: haiChau,
   latitude: 16.068,
   longitude: 108.224,
+  deposit_vnd: null,
+  deposit_months: 2,
+  amenities: ['furnished', 'air_conditioning', 'wifi', 'river_view'],
+  custom_amenities: [],
 });
 export const STUDIO = apartment({
   id: '33333333-3333-4333-8333-333333333333',
@@ -75,6 +82,8 @@ export const STUDIO = apartment({
   deposit_vnd: null,
   minimum_rental_months: null,
   rental_conditions: null,
+  amenities: ['wifi'],
+  custom_amenities: [],
   description: null,
   address: null,
   location_precision: 'approximate',

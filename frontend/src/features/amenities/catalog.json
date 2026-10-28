@@ -1,0 +1,39 @@
+[
+  {
+    "category": "comfort",
+    "items": [
+      "furnished",
+      "air_conditioning",
+      "water_heater",
+      "washing_machine",
+      "dryer",
+      "wifi",
+      "tv",
+      "workspace"
+    ]
+  },
+  {
+    "category": "kitchen",
+    "items": ["kitchen", "refrigerator", "stove", "microwave", "oven"]
+  },
+  {
+    "category": "building",
+    "items": [
+      "elevator",
+      "security",
+      "pool",
+      "gym",
+      "car_parking",
+      "motorbike_parking",
+      "cleaning_service"
+    ]
+  },
+  {
+    "category": "outdoor",
+    "items": ["balcony", "terrace", "garden", "sea_view", "river_view", "mountain_view"]
+  },
+  {
+    "category": "rules",
+    "items": ["pets_allowed", "smoking_allowed", "utilities_included"]
+  }
+]

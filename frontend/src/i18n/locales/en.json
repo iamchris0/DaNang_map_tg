@@ -116,7 +116,10 @@
     "monthShort": "month",
     "about": "About this place",
     "whereYoullLive": "Where you'll be",
-    "terms": "Rental terms"
+    "terms": "Rental terms",
+    "amenities": "Amenities",
+    "depositMonths_one": "{{count}} month's rent",
+    "depositMonths_other": "{{count}} months' rent"
   },
   "filters": {
     "title": "Filters",
@@ -135,12 +138,14 @@
       "price": "Price",
       "bedrooms": "Bedrooms",
       "district": "District",
-      "area": "Area"
+      "area": "Area",
+      "amenities": "Amenities"
     },
     "clear": "Clear",
     "clearAll": "Clear all",
     "priceHint": "Monthly rent in million ₫",
-    "areaHint": "Area in m²"
+    "areaHint": "Area in m²",
+    "amenitiesHint": "Show apartments that have all of these"
   },
   "notFound": {
     "title": "Page not found",
@@ -222,7 +227,8 @@
         "photos": "Photos",
         "terms": "Rental terms",
         "details": "Description",
-        "contact": "Agent or owner contact"
+        "contact": "Agent or owner contact",
+        "amenities": "Amenities"
       },
       "title": "Title",
       "titlePlaceholder": "e.g. 1BR near My Khe beach",
@@ -274,7 +280,18 @@
         "longitude": "location",
         "location_precision": "location precision",
         "images": "a photo"
-      }
+      },
+      "depositLabel": "Deposit",
+      "depositModes": {
+        "amount": "Fixed amount",
+        "months": "Months of rent"
+      },
+      "depositMonths": "Deposit, months of rent",
+      "customAmenities": "Your own amenities",
+      "customAmenityPlaceholder": "e.g. Rooftop BBQ",
+      "addAmenity": "Add",
+      "removeAmenity": "Remove {{name}}",
+      "customAmenityHint": "Up to {{max}} items, {{length}} characters each. Shown under “Other”."
     },
     "location": {
       "search": "Search address or landmark",
@@ -409,5 +426,47 @@
     "phone": "Enter a valid phone number",
     "oneDecimal": "At most one decimal place",
     "invalid": "Invalid value"
+  },
+  "amenities": {
+    "title": "Amenities",
+    "other": "Other",
+    "categories": {
+      "comfort": "Comfort",
+      "kitchen": "Kitchen",
+      "building": "Building & services",
+      "outdoor": "Views & outdoor",
+      "rules": "Rules & bills"
+    },
+    "items": {
+      "furnished": "Furnished",
+      "air_conditioning": "Air conditioning",
+      "water_heater": "Water heater",
+      "washing_machine": "Washing machine",
+      "dryer": "Dryer",
+      "wifi": "Wi-Fi",
+      "tv": "TV",
+      "workspace": "Workspace",
+      "kitchen": "Full kitchen",
+      "refrigerator": "Refrigerator",
+      "stove": "Stove",
+      "microwave": "Microwave",
+      "oven": "Oven",
+      "elevator": "Elevator",
+      "security": "24/7 security",
+      "pool": "Swimming pool",
+      "gym": "Gym",
+      "car_parking": "Car parking",
+      "motorbike_parking": "Motorbike parking",
+      "cleaning_service": "Cleaning service",
+      "balcony": "Balcony",
+      "terrace": "Terrace",
+      "garden": "Garden",
+      "sea_view": "Sea view",
+      "river_view": "River view",
+      "mountain_view": "Mountain view",
+      "pets_allowed": "Pets allowed",
+      "smoking_allowed": "Smoking allowed",
+      "utilities_included": "Utilities included"
+    }
   }
 }

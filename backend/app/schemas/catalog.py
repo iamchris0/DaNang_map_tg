@@ -6,6 +6,7 @@ from typing import Annotated
 from fastapi import Query
 
 from app.api.errors import AppError
+from app.core.amenities import UnknownAmenityError, normalize_amenities
 from app.schemas.apartment import MAX_VND
 
 BEDROOMS_3_PLUS = 3
@@ -45,6 +46,8 @@ class CatalogFilters:
     min_area: Decimal | None = None
     max_area: Decimal | None = None
     bbox: BBox | None = None
+    # The listing must have every one of these (keys from app.core.amenities).
+    amenities: tuple[str, ...] = ()
 
 
 def _invalid(param: str, message: str) -> AppError:
@@ -66,6 +69,9 @@ def catalog_filters(
     bbox: Annotated[
         str | None, Query(description="min_lng,min_lat,max_lng,max_lat", max_length=100)
     ] = None,
+    amenities: Annotated[
+        list[str] | None, Query(description="Amenity keys; listings must have all of them")
+    ] = None,
 ) -> CatalogFilters:
     if min_price is not None and max_price is not None and min_price > max_price:
         raise _invalid("min_price", "min_price must not exceed max_price")
@@ -76,6 +82,10 @@ def catalog_filters(
         raise _invalid("bedrooms", "bedrooms values must be 0, 1, 2 or 3 (3+)")
     if len(district or ()) > 20:
         raise _invalid("district", "Too many districts")
+    try:
+        amenity_keys = tuple(normalize_amenities(amenities or []))
+    except UnknownAmenityError as exc:
+        raise _invalid("amenities", str(exc)) from exc
     return CatalogFilters(
         min_price=min_price,
         max_price=max_price,
@@ -84,4 +94,5 @@ def catalog_filters(
         min_area=min_area,
         max_area=max_area,
         bbox=BBox.parse(bbox) if bbox else None,
+        amenities=amenity_keys,
     )

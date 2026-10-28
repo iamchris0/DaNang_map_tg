@@ -130,6 +130,33 @@ describe('filters', () => {
     expect(router.state.location.search).toBe('?view=list');
   });
 
+  it('filters by amenities picked in the amenities dropdown', async () => {
+    const api = installFakeApi();
+    const user = userEvent.setup();
+    const { router } = renderApp('/');
+    await screen.findByText('3 apartments in this area');
+
+    await user.click(screen.getByRole('button', { name: 'Amenities' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Amenities' });
+    expect(within(sheet).getByRole('group', { name: 'Building & services' })).toBeInTheDocument();
+    await user.click(within(sheet).getByRole('checkbox', { name: 'Air conditioning' }));
+    expect(
+      await within(sheet).findByRole('button', { name: 'Show 2 apartments' }),
+    ).toBeInTheDocument();
+    // Several amenities: listings must have all of them.
+    await user.click(within(sheet).getByRole('checkbox', { name: 'Swimming pool' }));
+    await user.click(await within(sheet).findByRole('button', { name: 'Show 1 apartment' }));
+
+    expect(router.state.location.search).toBe('?amenities=air_conditioning%2Cpool');
+    expect(screen.getByRole('button', { name: 'Air conditioning +1' })).toBeInTheDocument();
+    expect(await screen.findByText('1 apartment in this area')).toBeInTheDocument();
+    expect((await markerButtons()).map((m) => m.textContent)).toEqual(['12M ₫']);
+    expect(api.queries('/api/apartments/map').at(-1)?.getAll('amenities')).toEqual([
+      'air_conditioning',
+      'pool',
+    ]);
+  });
+
   it('debounces rapid filter edits into a single request', async () => {
     const api = installFakeApi();
     const user = userEvent.setup();

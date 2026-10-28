@@ -72,8 +72,11 @@ export function blankInput(): ApartmentInput {
     longitude: null,
     location_precision: null,
     deposit_vnd: null,
+    deposit_months: null,
     minimum_rental_months: null,
     rental_conditions: null,
+    amenities: [],
+    custom_amenities: [],
     agent_contact_type: null,
     agent_contact_value: null,
   };

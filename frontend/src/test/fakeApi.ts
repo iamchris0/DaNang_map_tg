@@ -31,6 +31,8 @@ function matches(apartment: ApartmentDetail, params: URLSearchParams): boolean {
     return false;
   }
   if (districts.length && !districts.includes(apartment.district.id)) return false;
+  const amenities = params.getAll('amenities');
+  if (amenities.some((key) => !apartment.amenities.includes(key))) return false;
   return true;
 }
 

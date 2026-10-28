@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.amenities import AMENITIES, normalize_amenities
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.core.storage import ObjectStorage, ensure_bucket, get_storage
@@ -230,8 +231,11 @@ async def create_demo_listings(db: AsyncSession, storage: ObjectStorage, *, rese
             latitude=demo.lat,
             longitude=demo.lng,
             location_precision=demo.precision,
-            deposit_vnd=price,
+            # Every other listing asks for the deposit in months instead of an amount.
+            deposit_vnd=price if seed % 2 else None,
+            deposit_months=None if seed % 2 else 1 + seed % 3,
             minimum_rental_months=6 if seed % 3 else 3,
+            amenities=_demo_amenities(seed),
             rental_conditions="Demo listing: no real tenancy conditions.",
             agent_contact_type=ContactType.TELEGRAM_USERNAME if demo.agent else None,
             agent_contact_value=demo.agent,
@@ -243,6 +247,13 @@ async def create_demo_listings(db: AsyncSession, storage: ObjectStorage, *, rese
     await db.commit()
     logger.info("Created %d demo listings", len(DEMO_LISTINGS))
     return len(DEMO_LISTINGS)
+
+
+def _demo_amenities(seed: int) -> list[str]:
+    """A plausible, varied set: the basics everywhere, extras depending on the listing."""
+    basics = ["furnished", "air_conditioning", "water_heater", "wifi", "refrigerator"]
+    extras = [key for index, key in enumerate(AMENITIES) if (index * 7 + seed) % 5 == 0]
+    return normalize_amenities([*basics, *extras])
 
 
 def main() -> None:

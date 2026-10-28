@@ -1,4 +1,5 @@
 import type { QueryValue } from '@/api/client';
+import { sortAmenities } from '@/features/amenities/catalog';
 
 /** Catalog filters. Prices are integer VND; `bedrooms` uses 0 = studio and 3 = "3+". */
 export interface CatalogFilters {
@@ -8,6 +9,8 @@ export interface CatalogFilters {
   districts: number[];
   minArea: number | null;
   maxArea: number | null;
+  /** Amenity keys; listings must have all of them. */
+  amenities: string[];
 }
 
 export const EMPTY_FILTERS: CatalogFilters = {
@@ -17,6 +20,7 @@ export const EMPTY_FILTERS: CatalogFilters = {
   districts: [],
   minArea: null,
   maxArea: null,
+  amenities: [],
 };
 
 export const BEDROOM_OPTIONS = [0, 1, 2, 3] as const;
@@ -29,6 +33,7 @@ const KEYS = {
   districts: 'district',
   minArea: 'min_area',
   maxArea: 'max_area',
+  amenities: 'amenities',
 } as const;
 
 function parseNumber(raw: string | null): number | null {
@@ -54,12 +59,13 @@ export function parseFilters(params: URLSearchParams): CatalogFilters {
     districts: parseIntList(params.get(KEYS.districts), (v) => v > 0),
     minArea: parseNumber(params.get(KEYS.minArea)),
     maxArea: parseNumber(params.get(KEYS.maxArea)),
+    amenities: sortAmenities((params.get(KEYS.amenities) ?? '').split(',')),
   };
 }
 
 export function writeFilters(params: URLSearchParams, filters: CatalogFilters): URLSearchParams {
   const next = new URLSearchParams(params);
-  const set = (key: string, value: number | null | number[]) => {
+  const set = (key: string, value: number | null | number[] | string[]) => {
     const text = Array.isArray(value) ? value.join(',') : value === null ? '' : String(value);
     if (text) next.set(key, text);
     else next.delete(key);
@@ -70,6 +76,7 @@ export function writeFilters(params: URLSearchParams, filters: CatalogFilters): 
   set(KEYS.districts, filters.districts);
   set(KEYS.minArea, filters.minArea);
   set(KEYS.maxArea, filters.maxArea);
+  set(KEYS.amenities, filters.amenities);
   return next;
 }
 
@@ -81,6 +88,7 @@ export function filtersToQuery(filters: CatalogFilters): Record<string, QueryVal
     district: filters.districts,
     min_area: filters.minArea,
     max_area: filters.maxArea,
+    amenities: filters.amenities,
   };
 }
 
@@ -90,5 +98,6 @@ export function activeFilterCount(filters: CatalogFilters): number {
     filters.bedrooms.length > 0,
     filters.districts.length > 0,
     filters.minArea !== null || filters.maxArea !== null,
+    filters.amenities.length > 0,
   ].filter(Boolean).length;
 }
