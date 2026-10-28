@@ -1,7 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { blankInput, installFakeAdminApi, makeImage } from '@/test/fakeAdminApi';
+import { blankInput, installFakeAdminApi, makeImage, VALID_LINK_CODE } from '@/test/fakeAdminApi';
 import { installFakeApi } from '@/test/fakeApi';
 import { markers } from '@/test/fakeMaplibre';
 import { renderApp } from '@/test/render';
@@ -31,6 +31,29 @@ describe('admin access', () => {
     installFakeAdminApi([], { role: 'landlord' });
     renderApp('/admin');
     expect(await screen.findByRole('heading', { name: 'My listings' })).toBeInTheDocument();
+  });
+
+  it("signs in from the bot's one-time /login link and opens the panel", async () => {
+    const api = installFakeAdminApi([], { signedIn: false });
+    const { router } = renderApp(`/login?code=${VALID_LINK_CODE}`);
+
+    expect(await screen.findByRole('heading', { name: 'Admin' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/admin');
+    expect(router.state.location.search).toBe('');
+    const attempts = api.requests.filter((r) => r.path === '/api/auth/link');
+    expect(attempts).toHaveLength(1); // a code is never sent twice
+    expect(sessionStorage.getItem('dna.session')).toBe('link-session');
+  });
+
+  it('explains when a /login link has expired or was used', async () => {
+    installFakeAdminApi([], { signedIn: false });
+    const { router } = renderApp('/login?code=expired-code-0123456789');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "This sign-in link doesn't work anymore",
+    );
+    expect(screen.getByText(/Send \/login to the bot/)).toBeInTheDocument();
+    expect(router.state.location.search).toBe(''); // the code is dropped from the address bar
   });
 
   it('denies the admin area to regular users', async () => {

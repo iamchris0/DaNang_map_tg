@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 
 import { ApartmentPage } from '@/pages/ApartmentPage';
 import { CatalogPage } from '@/pages/CatalogPage';
+import { LoginLinkPage } from '@/pages/LoginLinkPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { RootLayout } from '@/RootLayout';
 
@@ -11,6 +12,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <CatalogPage /> },
       { path: 'apartments/:id', element: <ApartmentPage /> },
+      { path: 'login', element: <LoginLinkPage /> },
       {
         // Admin code (forms, validation) is loaded only when an administrator opens it.
         path: 'admin',

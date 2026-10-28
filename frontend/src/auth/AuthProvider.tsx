@@ -15,6 +15,8 @@ export interface AuthState {
   saveLanguage: (language: Language) => void;
   /** Development-only login (backend must have DEV_AUTH_ENABLED=true). */
   devLogin: (telegramUserId: number) => Promise<void>;
+  /** Browser sign-in with a one-time code from the bot's /login link. */
+  loginWithLink: (code: string) => Promise<void>;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -23,6 +25,7 @@ export const AuthContext = createContext<AuthState>({
   user: null,
   saveLanguage: () => undefined,
   devLogin: () => Promise.resolve(),
+  loginWithLink: () => Promise.resolve(),
 });
 
 /**
@@ -78,21 +81,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user],
   );
 
-  const devLogin = useCallback(
-    async (telegramUserId: number) => {
-      const response = await apiFetch<AuthResponse>('/api/auth/dev', {
-        method: 'POST',
-        json: { telegram_user_id: telegramUserId },
-      });
+  const signIn = useCallback(
+    async (path: string, body: object) => {
+      const response = await apiFetch<AuthResponse>(path, { method: 'POST', json: body });
       setSessionToken(response.access_token);
       accept(response.user);
     },
     [accept],
   );
+  const devLogin = useCallback(
+    (telegramUserId: number) => signIn('/api/auth/dev', { telegram_user_id: telegramUserId }),
+    [signIn],
+  );
+  const loginWithLink = useCallback((code: string) => signIn('/api/auth/link', { code }), [signIn]);
 
   const value = useMemo(
-    () => ({ status, user, saveLanguage, devLogin }),
-    [status, user, saveLanguage, devLogin],
+    () => ({ status, user, saveLanguage, devLogin, loginWithLink }),
+    [status, user, saveLanguage, devLogin, loginWithLink],
   );
   return <AuthContext value={value}>{children}</AuthContext>;
 }

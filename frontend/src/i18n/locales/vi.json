@@ -134,13 +134,19 @@
     "title": "Không tìm thấy trang",
     "back": "Về trang chủ"
   },
+  "login": {
+    "signingIn": "Đang đăng nhập…",
+    "failed": "Liên kết đăng nhập này không còn hiệu lực",
+    "failedHint": "Liên kết từ bot chỉ dùng được một lần và trong vài phút. Gửi /login cho bot để nhận liên kết mới.",
+    "toCatalog": "Đến danh mục"
+  },
   "admin": {
     "title": "Quản trị",
     "titleLandlord": "Tin đăng của tôi",
     "open": "Bảng quản trị",
     "backToCatalog": "Danh mục",
     "accessDenied": "Mục này chỉ dành cho quản trị viên.",
-    "openInTelegram": "Mở ứng dụng từ Telegram để đăng nhập.",
+    "openInTelegram": "Mở ứng dụng từ Telegram, hoặc gửi /login cho bot để nhận liên kết đăng nhập cho trình duyệt này.",
     "devLogin": {
       "title": "Đăng nhập cho nhà phát triển",
       "hint": "Chỉ dùng khi phát triển cục bộ. Dùng Telegram user ID có trong ADMIN_TELEGRAM_USER_IDS.",

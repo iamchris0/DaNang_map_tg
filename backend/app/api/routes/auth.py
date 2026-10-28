@@ -14,10 +14,12 @@ from app.models import User
 from app.schemas.auth import (
     AuthResponse,
     DevAuthRequest,
+    LinkAuthRequest,
     TelegramAuthRequest,
     UserOut,
     UserPreferencesUpdate,
 )
+from app.services import login_links
 from app.services.users import effective_role, is_admin, set_language, upsert_telegram_user
 
 logger = logging.getLogger(__name__)
@@ -70,6 +72,19 @@ async def telegram_login(
         ) from exc
     user = await upsert_telegram_user(db, settings, verified.user)
     return _auth_response(settings, user, verified.start_param)
+
+
+@router.post("/link", response_model=AuthResponse, dependencies=[Depends(limit_auth)])
+async def link_login(body: LinkAuthRequest, db: DbSession, settings: AppSettings) -> AuthResponse:
+    """Browser sign-in with a one-time code from the bot's /login link."""
+    user = await login_links.redeem_code(db, body.code)
+    if user is None:
+        raise AppError(
+            "invalid_login_link",
+            "This sign-in link has expired or was already used",
+            status_code=401,
+        )
+    return _auth_response(settings, user, None)
 
 
 @router.post("/dev", response_model=AuthResponse, dependencies=[Depends(limit_auth)])

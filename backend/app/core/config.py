@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     dev_auth_enabled: bool = False
     admin_telegram_user_ids: Annotated[frozenset[int], NoDecode] = frozenset()
     rate_limit_auth: str = "20/minute"
+    # Lifetime of the one-time browser sign-in links sent by the bot (/login).
+    login_link_ttl_seconds: int = 300
     rate_limit_admin_write: str = "120/minute"
 
     # Listings must be placed inside this box: "min_lng,min_lat,max_lng,max_lat".

@@ -12,6 +12,10 @@ class TelegramAuthRequest(Schema):
     init_data: str = Field(min_length=1, max_length=8192)
 
 
+class LinkAuthRequest(Schema):
+    code: str = Field(min_length=16, max_length=128)
+
+
 class DevAuthRequest(Schema):
     telegram_user_id: int = Field(gt=0)
     username: str | None = Field(default=None, max_length=64)

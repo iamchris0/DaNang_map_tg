@@ -146,13 +146,19 @@
     "title": "Page not found",
     "back": "Back to home"
   },
+  "login": {
+    "signingIn": "Signing you in…",
+    "failed": "This sign-in link doesn't work anymore",
+    "failedHint": "Links from the bot work once and only for a few minutes. Send /login to the bot to get a new one.",
+    "toCatalog": "Go to the catalog"
+  },
   "admin": {
     "title": "Admin",
     "titleLandlord": "My listings",
     "open": "Admin panel",
     "backToCatalog": "Catalog",
     "accessDenied": "This section is only available to administrators.",
-    "openInTelegram": "Open the app from Telegram to sign in.",
+    "openInTelegram": "Open the app from Telegram, or send /login to the bot to get a sign-in link for this browser.",
     "devLogin": {
       "title": "Developer sign-in",
       "hint": "Local development only. Use a Telegram user ID listed in ADMIN_TELEGRAM_USER_IDS.",

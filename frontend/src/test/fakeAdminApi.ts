@@ -83,14 +83,19 @@ export function blankInput(): ApartmentInput {
  * Stateful in-memory admin API (signed-in administrator). Mirrors the backend's lifecycle
  * rules closely enough to exercise the UI; the backend has its own exhaustive tests.
  */
+/** The only code the fake accepts on POST /api/auth/link (the bot's /login link). */
+export const VALID_LINK_CODE = 'valid-one-time-code-0123456789';
+
 export function installFakeAdminApi(
   initial: Partial<Stored>[] = [],
   {
     isAdmin = true,
     role = isAdmin ? 'admin' : 'user',
-  }: { isAdmin?: boolean; role?: 'user' | 'landlord' | 'admin' } = {},
+    signedIn = true,
+  }: { isAdmin?: boolean; role?: 'user' | 'landlord' | 'admin'; signedIn?: boolean } = {},
 ) {
-  setSessionToken('test-session');
+  if (signedIn) setSessionToken('test-session');
+  const usedCodes = new Set<string>();
   const store = new Map<string, Stored>();
   let counter = 0;
   const add = (data: Partial<Stored>) => {
@@ -148,16 +153,31 @@ export function installFakeAdminApi(
   const handle = (method: string, url: URL, body: unknown, headers: Headers): Response => {
     const path = url.pathname;
     requests.push({ method, path, body, headers });
-    if (path === '/api/auth/me') {
+    const me = {
+      id: 'admin-user',
+      telegram_user_id: 1001,
+      username: 'boss',
+      display_name: 'Boss',
+      preferred_language: null,
+      is_admin: isAdmin,
+      role,
+    };
+    if (path === '/api/auth/link' && method === 'POST') {
+      const { code } = body as { code: string };
+      if (code !== VALID_LINK_CODE || usedCodes.has(code)) {
+        return error(401, 'invalid_login_link');
+      }
+      usedCodes.add(code);
       return json({
-        id: 'admin-user',
-        telegram_user_id: 1001,
-        username: 'boss',
-        display_name: 'Boss',
-        preferred_language: null,
-        is_admin: isAdmin,
-        role,
+        access_token: 'link-session',
+        token_type: 'bearer',
+        expires_at: '2030-01-01T00:00:00Z',
+        user: me,
+        start_param: null,
       });
+    }
+    if (path === '/api/auth/me') {
+      return json(me);
     }
     if (path === '/api/districts') return json(DISTRICTS);
     if (path === '/api/admin/geocode') return json(GEOCODE_RESULTS);

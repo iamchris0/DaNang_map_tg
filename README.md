@@ -197,8 +197,11 @@ Open `/admin` (or the ⚙ button in the catalog header, shown to administrators 
   - **Landlords** choose that role in the bot (see *Roles* below). They manage, and see on the
     map, only the listings they created; other listings answer 404.
 
-  In a local browser, development builds offer a *Developer sign-in* on `localhost` (needs
-  `DEV_AUTH_ENABLED=true`). Production builds don't contain it.
+  **In a browser:** send `/login` to the bot. Administrators and landlords get a one-time
+  link (`…/login?code=…`, valid for `LOGIN_LINK_TTL_SECONDS`, default 5 minutes) that signs
+  them in and opens the panel. Only a hash of the code is stored; it works once.
+  In a local browser, development builds also offer a *Developer sign-in* on `localhost`
+  (needs `DEV_AUTH_ENABLED=true`). Production builds don't contain it.
 - **Language:** English, Russian or Vietnamese; English until the user picks one. The first
   `/start` asks for it, `/language` changes it, and the app's EN/RU/VI switcher does the same.
   The choice is saved in the user's profile, so the bot and the app always match. (Telegram

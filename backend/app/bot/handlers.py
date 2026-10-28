@@ -7,6 +7,7 @@
   their own contact makes them a landlord, who manages their own listings in the Mini App.
 - /role: shows the current role and offers to change it.
 - /language: changes the language (shared with the Mini App through the user profile).
+- /login: administrators and landlords get a one-time link that signs them in on a browser.
 
 The conversation logic lives in `*_flow` functions that return the replies to send, so it
 can be tested without Telegram.
@@ -23,6 +24,7 @@ from aiogram.types import (
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     KeyboardButton,
+    LinkPreviewOptions,
     Message,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
@@ -35,7 +37,7 @@ from app.core.config import Settings
 from app.core.security import TelegramWebAppUser
 from app.models import User
 from app.models.enums import Language, UserRole
-from app.services import users
+from app.services import login_links, users
 
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 ROLE_CALLBACK = "role"
@@ -71,8 +73,10 @@ TEXTS = {
         "role_landlord": "landlord",
         "role_admin": "administrator",
         "about_tenant": "You see every available apartment.",
-        "about_landlord": "You manage your own listings and see only them in the app.",
-        "about_admin": "You manage all listings. This is set in the server configuration.",
+        "about_landlord": "You manage your own listings and see only them in the app. "
+        "Use /login to open the admin panel in a browser.",
+        "about_admin": "You manage all listings. This is set in the server configuration. "
+        "Use /login to open the admin panel in a browser.",
         "switch_to_landlord": "🔑 Become a landlord",
         "switch_to_tenant": "🔍 Switch to tenant",
         "tenant_switched": "You are a tenant now. Your listings stay as they are; "
@@ -81,6 +85,11 @@ TEXTS = {
         "cmd_role": "Your role and how to change it",
         "cmd_language": "Change the language",
         "language_set": "✅ Language: {language}.",
+        "login_link": "🔐 Your sign-in link for the admin panel in a browser:\n\n{url}\n\n"
+        "It works once and expires in {minutes} minutes. Don't share it: anyone with it can "
+        "sign in as you.",
+        "login_denied": "The admin panel is for landlords and administrators. To list "
+        "apartments, become a landlord with /role.",
     },
     Language.RU: {
         "greeting": "Долгосрочная аренда квартир в Дананге на карте: фильтры по цене, "
@@ -107,8 +116,10 @@ TEXTS = {
         "role_landlord": "арендодатель",
         "role_admin": "администратор",
         "about_tenant": "Вы видите все свободные квартиры.",
-        "about_landlord": "Вы управляете своими объявлениями и видите в приложении только их.",
-        "about_admin": "Вы управляете всеми объявлениями. Это задаётся в настройках сервера.",
+        "about_landlord": "Вы управляете своими объявлениями и видите в приложении только их. "
+        "Команда /login даёт вход в панель управления из браузера.",
+        "about_admin": "Вы управляете всеми объявлениями. Это задаётся в настройках сервера. "
+        "Команда /login даёт вход в панель управления из браузера.",
         "switch_to_landlord": "🔑 Стать арендодателем",
         "switch_to_tenant": "🔍 Стать арендатором",
         "tenant_switched": "Теперь вы арендатор. Ваши объявления остаются как есть; "
@@ -117,6 +128,11 @@ TEXTS = {
         "cmd_role": "Ваша роль и как её изменить",
         "cmd_language": "Сменить язык",
         "language_set": "✅ Язык: {language}.",
+        "login_link": "🔐 Ваша ссылка для входа в панель управления в браузере:\n\n{url}\n\n"
+        "Она работает один раз и действует {minutes} мин. Никому её не пересылайте: по ней "
+        "можно войти от вашего имени.",
+        "login_denied": "Панель управления доступна арендодателям и администраторам. Чтобы "
+        "размещать квартиры, станьте арендодателем через /role.",
     },
     Language.VI: {
         "greeting": "Thuê căn hộ dài hạn tại Đà Nẵng trên bản đồ: lọc theo giá, số phòng ngủ "
@@ -143,9 +159,11 @@ TEXTS = {
         "role_landlord": "chủ nhà",
         "role_admin": "quản trị viên",
         "about_tenant": "Bạn thấy tất cả căn hộ còn trống.",
-        "about_landlord": "Bạn quản lý tin đăng của mình và chỉ thấy chúng trong ứng dụng.",
+        "about_landlord": "Bạn quản lý tin đăng của mình và chỉ thấy chúng trong ứng dụng. "
+        "Dùng /login để mở bảng quản trị trên trình duyệt.",
         "about_admin": "Bạn quản lý tất cả tin đăng. Điều này được thiết lập trong cấu hình "
-        "máy chủ.",
+        "máy chủ. "
+        "Dùng /login để mở bảng quản trị trên trình duyệt.",
         "switch_to_landlord": "🔑 Trở thành chủ nhà",
         "switch_to_tenant": "🔍 Chuyển sang người thuê",
         "tenant_switched": "Bạn đã là người thuê. Tin đăng của bạn vẫn giữ nguyên; dùng /role "
@@ -154,6 +172,11 @@ TEXTS = {
         "cmd_role": "Vai trò của bạn và cách thay đổi",
         "cmd_language": "Đổi ngôn ngữ",
         "language_set": "✅ Ngôn ngữ: {language}.",
+        "login_link": "🔐 Liên kết đăng nhập bảng quản trị trên trình duyệt của bạn:\n\n{url}\n\n"
+        "Liên kết chỉ dùng được một lần và hết hạn sau {minutes} phút. Đừng chia sẻ: bất kỳ ai "
+        "có liên kết đều có thể đăng nhập bằng tài khoản của bạn.",
+        "login_denied": "Bảng quản trị dành cho chủ nhà và quản trị viên. Để đăng căn hộ, hãy "
+        "trở thành chủ nhà bằng /role.",
     },
 }
 # Asked before anything else, so it is written in all three languages.
@@ -172,6 +195,8 @@ Markup = InlineKeyboardMarkup | ReplyKeyboardMarkup | ReplyKeyboardRemove
 class Reply:
     text: str
     markup: Markup | None = None
+    # Off for sign-in links: no preview card, and Telegram doesn't fetch the page.
+    link_preview: bool = True
 
 
 ChoiceFlow = Callable[[AsyncSession, Settings, TelegramUser, str], Awaitable[list[Reply]]]
@@ -387,6 +412,22 @@ def describe_role(settings: Settings, user: User, language: Language) -> Reply:
     return Reply(text, InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None)
 
 
+async def login_flow(
+    session: AsyncSession, settings: Settings, tg_user: TelegramUser
+) -> list[Reply]:
+    """/login: a one-time link that signs an administrator or landlord in on a browser."""
+    user = await users.upsert_telegram_user(session, settings, _tg_user(tg_user))
+    texts = TEXTS[user_language(user)]
+    if not users.is_admin(settings, user):
+        return [Reply(texts["login_denied"])]
+    code = await login_links.issue_code(session, settings, user)
+    text = texts["login_link"].format(
+        url=login_links.login_url(settings, code),
+        minutes=max(1, settings.login_link_ttl_seconds // 60),
+    )
+    return [Reply(text, link_preview=False)]
+
+
 async def role_flow(
     session: AsyncSession, settings: Settings, tg_user: TelegramUser
 ) -> list[Reply]:
@@ -396,7 +437,8 @@ async def role_flow(
 
 async def _send(message: Message, replies: list[Reply]) -> None:
     for reply in replies:
-        await message.answer(reply.text, reply_markup=reply.markup)
+        preview = None if reply.link_preview else LinkPreviewOptions(is_disabled=True)
+        await message.answer(reply.text, reply_markup=reply.markup, link_preview_options=preview)
 
 
 def build_router(settings: Settings, sessions: async_sessionmaker[AsyncSession]) -> Router:
@@ -416,6 +458,14 @@ def build_router(settings: Settings, sessions: async_sessionmaker[AsyncSession])
             return
         async with sessions() as session:
             replies = await role_flow(session, settings, message.from_user)
+        await _send(message, replies)
+
+    @router.message(Command("login"))
+    async def on_login(message: Message) -> None:
+        if message.from_user is None:
+            return
+        async with sessions() as session:
+            replies = await login_flow(session, settings, message.from_user)
         await _send(message, replies)
 
     @router.message(Command("language"))
